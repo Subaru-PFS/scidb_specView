@@ -1,6 +1,6 @@
 .directory
-/SciServer.egg-info
-/SpectrumViewer.egg-info
+SciServer.egg-info
+SpectrumViewer.egg-info
 /dist
 **/.project
 **/.pydevproject
@@ -12,3 +12,5 @@
 **/.ipynb_checkpoints
 /SpectrumViewer/__pycache__/
 /build
+/venv
+/winvenv

@@ -4,8 +4,13 @@ import plotly
 from IPython.display import FileLink, FileLinks
 import plotly.graph_objs as go
 import webbrowser
+from collections.abc import Iterable
+
 class SpecController:
     def __init__(self,model,view):
+        #if not isinstance(model, Iterable):
+        #    model = list(model)
+
         self.model = model
         # take SpecModel object as argument to initialize
         self.view = view
