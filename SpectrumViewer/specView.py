@@ -4,14 +4,14 @@ import plotly.tools as tls
 import mpld3
 class SpecView:
     def __init__(self,filename):
-        self.figure = plt.figure(filename, figsize=(10, 8), dpi=100)
+        self.figure = plt.figure("", figsize=(10, 8), dpi=100)
         # initialize the figure object with matplotlib
         #self.graphAx = self.figure.add_subplot(212)
         self.graphAx = self.figure.add_subplot(111)
         # generate axes object
-        self.graphAx.set_xlabel('lambda/angstrom')
+        self.graphAx.set_xlabel(r'$\lambda $ [${\AA}$]')
 
-        self.graphAx.set_ylabel('10-17 ergs/s/cm2/angstrom')
+        self.graphAx.set_ylabel(r'10$^{-17}$ ergs s$^{-1}$ cm$^{-2}$ $\AA^{-1}$')
         self.graphAx.set_ylim([0, 500])
         #configure the axe where the spectrum will be showed
 
@@ -21,11 +21,12 @@ class SpecView:
         self.checkBtns = CheckButtons(self.rax, ('Skyline',
                                                  'Flux',
                                                  'Model',
+                                                 'Residual',
                                                  'Emission',
                                                  'Absorption',
                                                  'A or E',
                                                  'Other'),
-                                      (True, True, True,False,False,False,False))
+                                      (True, True, True,True,False,False,False,False))
         # create buttons with tags: 'Skyline',
         #                                                  'Flux',
         #                                                  'Model',
@@ -45,12 +46,12 @@ class SpecView:
         #TODO : change the display mode to cell mode
 class windowView:
     def __init__(self,filename):
-        self.figure = plt.figure(filename, figsize=(18, 10), dpi=100)
+        self.figure = plt.figure("", figsize=(18, 10), dpi=100)
 
         #self.graphAx = self.figure.add_subplot(212)
         self.graphAx = self.figure.add_subplot(111)
-        self.graphAx.set_xlabel('lambda/angstrom')
-        self.graphAx.set_ylabel('10-17 ergs/s/cm2/angstrom')
+        self.graphAx.set_xlabel(r'$\lambda $ [${\AA}$]')
+        self.graphAx.set_ylabel(r'10$^{-17}$ ergs s$^{-1}$ cm$^{-2}$ $\AA^{-1}$')
         self.graphAx.set_ylim([0, 150])
     def getMatplotlibFig(self):
         return self.figure

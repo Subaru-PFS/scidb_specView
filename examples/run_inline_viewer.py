@@ -1,6 +1,8 @@
 import SpectrumViewer.mvcViewer as mvc
 
-fileName = './fits/example_lite.fits'
-fileName = './fits/example_pfsObject.fits'
-fileSource = 'PFS'
-mvc.view(fileName,fileSource)
+fileName1 = './fits/example_lite.fits'
+fileName2 = './fits/example_pfsObject.fits'
+fileName3 = './fits/example_lam1d.fits'
+mvc.view([fileName1,fileName2,fileName3])
+
+
