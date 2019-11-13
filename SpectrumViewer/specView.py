@@ -12,7 +12,7 @@ class SpecView:
         self.graphAx.set_xlabel(r'$\lambda $ [${\AA}$]')
 
         self.graphAx.set_ylabel(r'10$^{-17}$ ergs s$^{-1}$ cm$^{-2}$ $\AA^{-1}$')
-        self.graphAx.set_ylim([0, 500])
+        #self.graphAx.set_ylim([0, 500])
         #configure the axe where the spectrum will be showed
 
 
@@ -52,7 +52,7 @@ class windowView:
         self.graphAx = self.figure.add_subplot(111)
         self.graphAx.set_xlabel(r'$\lambda $ [${\AA}$]')
         self.graphAx.set_ylabel(r'10$^{-17}$ ergs s$^{-1}$ cm$^{-2}$ $\AA^{-1}$')
-        self.graphAx.set_ylim([0, 150])
+        #self.graphAx.set_ylim([0, 150])
     def getMatplotlibFig(self):
         return self.figure
     def returnPlotlyFig(self):
