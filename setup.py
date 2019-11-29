@@ -1,11 +1,13 @@
 from setuptools import setup
 
 setup(name='SpectrumViewer',
-      version='0.1',
-      description='PFS Spectrum Viewer',
+      version='0.2',
+      description='Spectrum Viewer',
       url='http://github.com/Subaru-PFS/pfs_specViewer',
-      author='Zuo "David" Wang, Manuchehr Taghizadeh-Popp',
-      author_email='blach@example.com',
-      license='MIT',
+      author='Manuchehr Taghizadeh-Popp, Zuo "David" Wang',
+      author_email='mtaghiza@jhu.edu',
+      license='GNU',
       packages=['SpectrumViewer'],
-      zip_safe=False)
+      zip_safe=False,
+      include_package_data=True
+      )
