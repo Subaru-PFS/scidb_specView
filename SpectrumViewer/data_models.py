@@ -3,7 +3,7 @@ from enum import Enum
 
 
 
-class Stream2D:
+class Spectrum:
     def __init__(self,x_coords=None, y_coords=None, name=None, color="black", linewidth=1, alpha=1):
         self.x_coords = x_coords
         self.y_coords = y_coords

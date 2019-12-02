@@ -2,7 +2,7 @@ import SpectrumViewer.specModel as M
 import SpectrumViewer.specView as V
 from SpectrumViewer import spectral_lines_info
 import SpectrumViewer.dataDriver as driver
-from SpectrumViewer.data_models import Medium, Stream2D, SpectrumLineGrid, SpectrumLine
+from SpectrumViewer.data_models import Medium, Spectrum, SpectrumLineGrid, SpectrumLine
 import SpectrumViewer
 import matplotlib.patches
 
@@ -38,10 +38,10 @@ class MvcViewer:
         new_spectral_lines_grid, new_spectral_lines_name = driver.load_new_spectral_lines_grid(self.model.streams, spectral_lines_names, spectral_lines_grid_name, redshift, medium, color, alpha, linewidth)
         self.model.streams[new_spectral_lines_name] = new_spectral_lines_grid
 
-    def add_stream2d(self, data_stream, replace=False):
+    def add_spectrum(self, data_stream, replace=False):
         #check that streams are not already stored
 
-        new_stream_array = driver.load_new_stream2d(self.model.streams, data_stream, replace)
+        new_stream_array = driver.load_new_spectrum(self.model.streams, data_stream, replace)
         for new_stream in new_stream_array:
             self.model.streams[new_stream.name] = new_stream
 
@@ -79,7 +79,7 @@ class MvcViewer:
 
     def plot(self, create_new_plot=False):
         if create_new_plot:
-            self.view = V2.SpecView()
+            self.view = V.SpecView()
             #self.view.select_all_button_callback = self.select_all_button_callback
         self.plot_all()
 
@@ -97,14 +97,14 @@ class MvcViewer:
 
                 print("rect bound = " + str(rectangle_boundaries) + " " + str(type(self.model.streams[stream_name])))
 
-                if type(self.model.streams[stream_name]) == SpectrumViewer.data_models.Stream2D:
+                if type(self.model.streams[stream_name]) == SpectrumViewer.data_models.Spectrum:
                     stream = self.model.streams[stream_name]
                     if not (  bounds.x2 < np.min(stream.x_coords) or bounds.x1 > np.max(stream.x_coords) or \
                               bounds.y2 < np.min(stream.y_coords) or bounds.y1 > np.max(stream.y_coords) ):
 
                         x_coords = stream.x_coords[(  (stream.x_coords >= bounds.x1) & (stream.x_coords <= bounds.x2) & (stream.y_coords >= bounds.y1) & (stream.y_coords <= bounds.y2) )]
                         y_coords = stream.y_coords[(  (stream.x_coords >= bounds.x1) & (stream.x_coords <= bounds.x2) & (stream.y_coords >= bounds.y1) & (stream.y_coords <= bounds.y2) )]
-                        new_stream = Stream2D(x_coords,y_coords,stream_name,stream.color, stream.linewidth, stream.alpha)
+                        new_stream = Spectrum(x_coords,y_coords,stream_name,stream.color, stream.linewidth, stream.alpha)
                         data_within_rectangle[stream_name] = new_stream
 
                 elif type(self.model.streams[stream_name]) == SpectrumViewer.data_models.SpectrumLineGrid:
@@ -198,7 +198,7 @@ class MvcViewer:
         num_spec_lines = len(spectral_lines_info)
         for stream_name in self.model.streams.keys():
             stream = self.model.streams[stream_name]
-            if type(stream) == SpectrumViewer.data_models.Stream2D:
+            if type(stream) == SpectrumViewer.data_models.Spectrum:
                 x_range[0] = min(x_range[0],min(stream.x_coords))
                 x_range[1] = max(x_range[1],max(stream.x_coords))
                 y_range[0] = min(y_range[0],min(stream.y_coords))
@@ -210,7 +210,7 @@ class MvcViewer:
         for stream_name in self.model.streams.keys():
 
             stream = self.model.streams[stream_name]
-            if type(stream) == SpectrumViewer.data_models.Stream2D:
+            if type(stream) == SpectrumViewer.data_models.Spectrum:
                 color = stream.color
                 alpha = stream.alpha
                 linewidth = stream.linewidth

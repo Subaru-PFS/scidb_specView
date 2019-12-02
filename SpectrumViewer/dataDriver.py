@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import SpectrumViewer.CoaddObj as Coadd
 import SpectrumViewer.ZObj as Z
 import SpectrumViewer.data_models as data_models
-from SpectrumViewer.data_models import Medium, Stream2D, SpectrumLineGrid
+from SpectrumViewer.data_models import Medium, Spectrum, SpectrumLineGrid
 import SpectrumViewer
 
 #from SpectrumViewer.data_models import *
@@ -320,27 +320,27 @@ def load_new_streams(current_data_streams, new_data_streams, new_display_names, 
         x_coords = np.asarray(_new_data_streams[0][0])
         y_coords = np.asarray(_new_data_streams[0][1])
 
-        new_stream = data_models.Stream2D(x_coords,y_coords,new_stream_name)
+        new_stream = data_models.Spectrum(x_coords,y_coords,new_stream_name)
         updated_streams[new_stream_name] = new_stream
 
     return updated_streams
 
 
-def load_new_stream2d(current_data_streams, new_data_stream, replace=False):
+def load_new_spectrum(current_data_streams, new_spectrum, replace=False):
 
-    if type(new_data_stream) == SpectrumViewer.data_models.Stream2D:
-        _new_data_stream = [new_data_stream]
-    elif type(new_data_stream) == list and len(new_data_stream) > 0 and type(new_data_stream[0]):
-        _new_data_stream = new_data_stream
+    if type(new_spectrum) == SpectrumViewer.data_models.Spectrum:
+        _new_spectrum = [new_spectrum]
+    elif type(new_spectrum) == list and len(new_spectrum) > 0 and type(new_spectrum[0]):
+        _new_spectrum = new_spectrum
     else:
         raise Exception("Unsupported input object")
 
     if not replace:
-        for new_data_stream in _new_data_stream:
-            if str(new_data_stream.name) in current_data_streams.keys():
-                raise Exception("Stream named " + str(new_data_stream.name) + " already exists")
+        for new_spec in _new_spectrum:
+            if str(new_spec.name) in current_data_streams.keys():
+                raise Exception("Spectrum named " + str(new_spec.name) + " already exists")
 
-    return _new_data_stream
+    return _new_spectrum
 
 
 
