@@ -1871,7 +1871,7 @@ class SpanSelector(_SelectorWidget):
 
         rectprops['animated'] = self.useblit
 
-        cbook._check_in_list(['horizontal', 'vertical'], direction=direction)
+        _check_in_list(['horizontal', 'vertical'], direction=direction)
         self.direction = direction
 
         self.rect = None
@@ -1979,7 +1979,7 @@ class SpanSelector(_SelectorWidget):
         self.pressv = None
         return False
 
-    @cbook.deprecated("3.1")
+    # @cbook.deprecated("3.1")
     @property
     def buttonDown(self):
         return False
@@ -2238,7 +2238,7 @@ class RectangleSelector(_SelectorWidget):
         self.minspanx = minspanx
         self.minspany = minspany
 
-        cbook._check_in_list(['data', 'pixels'], spancoords=spancoords)
+        _check_in_list(['data', 'pixels'], spancoords=spancoords)
         self.spancoords = spancoords
         self.drawtype = drawtype
 
@@ -2320,7 +2320,7 @@ class RectangleSelector(_SelectorWidget):
             xmin, ymin = self.eventpress.x, self.eventpress.y
             xmax, ymax = self.eventrelease.x, self.eventrelease.y
         else:
-            cbook._check_in_list(['data', 'pixels'],
+            _check_in_list(['data', 'pixels'],
                                  spancoords=self.spancoords)
 
         if xmin > xmax:
@@ -2988,3 +2988,22 @@ class Lasso(AxesWidget):
             self.canvas.draw_idle()
 
 
+
+
+
+def _check_in_list(values, **kwargs):
+    """
+    from https://matplotlib.org/3.1.1/_modules/matplotlib/cbook.html
+
+    For each *key, value* pair in *kwargs*, check that *value* is in *values*;
+    if not, raise an appropriate ValueError.
+
+    Examples
+    --------
+    >>> cbook._check_in_list(["foo", "bar"], arg=arg, other_arg=other_arg)
+    """
+    for k, v in kwargs.items():
+        if v not in values:
+            raise ValueError(
+                "{!r} is not a valid value for {}; supported values are {}"
+                .format(v, k, ', '.join(map(repr, values))))
