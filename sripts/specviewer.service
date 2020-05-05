@@ -1,0 +1,11 @@
+[Unit]
+Description=Gunicorn instance to serve the specviewer website based on python Dash
+After=network.target
+
+[Service]
+WorkingDirectory=/var/www/specviewer/prod/scidb_specview
+ExecStart=/bin/bash /var/www/specviewer/prod/scidb_specview/scripts/run-website/run.x
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
