@@ -18,10 +18,10 @@ import matplotlib.text
 import numpy as np
 import matplotlib.transforms as transforms
 import copy
-from . import controller as c
+from specviewer import controller as c
 
-from . import data_driver
-from . import app_layout, callbacks
+from specviewer import data_driver
+from specviewer import app_layout, callbacks
 from datetime import datetime
 
 import json
