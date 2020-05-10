@@ -12,10 +12,12 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
 */
         set_dropdown_options: function(modified_timestamp, data) {
             options = []
-            trace_names = Object.keys(data.traces)
-            for(i=0; i<trace_names.length; i++){
-                trace_name = trace_names[i]
-                options.push({label: trace_name, value: trace_name})
+            if(data != null){
+                trace_names = Object.keys(data.traces)
+                for(i=0; i<trace_names.length; i++){
+                    trace_name = trace_names[i]
+                    options.push({label: trace_name, value: trace_name})
+                }
             }
             return options
         },
