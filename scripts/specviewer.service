@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 WorkingDirectory=/var/www/specviewer/prod/scidb_specview
-ExecStart=/bin/bash /var/www/specviewer/prod/scidb_specview/scripts/run-website/run.x
+ExecStart=/bin/bash /var/www/specviewer/prod/scidb_specview/scripts/run-website.x
 Restart=always
 
 [Install]
