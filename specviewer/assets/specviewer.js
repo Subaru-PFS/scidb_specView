@@ -32,27 +32,30 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
 
 
 function build_figure_data(data){
-
-    trace_names = Object.keys(data.traces)
-    traces = []
-    for(i=0; i<trace_names.length; i++){
-        trace_name = trace_names[i]
-        trace_data = data.traces[trace_name]
-        trace = {   name:data.traces[trace_name].name,
-                    x: data.traces[trace_name].x_coords,
-                    y: data.traces[trace_name].y_coords,
-                    mode: "lines",
-                    type: 'scattergl',
-                    visible: data.traces[trace_name].visible,
-                    color: data.traces[trace_name].color,
-                    xaxis: "x",
-                    yaxis: "y",
-                    marker:{size: 12},
-                    line:{color:data.traces[trace_name].color}
-         }
-        traces.push(trace)
+    if(data != null){
+        trace_names = Object.keys(data.traces)
+        traces = []
+        for(i=0; i<trace_names.length; i++){
+            trace_name = trace_names[i]
+            trace_data = data.traces[trace_name]
+            trace = {   name:data.traces[trace_name].name,
+                        x: data.traces[trace_name].x_coords,
+                        y: data.traces[trace_name].y_coords,
+                        mode: "lines",
+                        type: 'scattergl',
+                        visible: data.traces[trace_name].visible,
+                        color: data.traces[trace_name].color,
+                        xaxis: "x",
+                        yaxis: "y",
+                        marker:{size: 12},
+                        line:{color:data.traces[trace_name].color}
+             }
+            traces.push(trace)
+        }
+        return traces
+    }else{
+        return []
     }
-    return traces
 }
 
 
