@@ -16,7 +16,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
         # The local store will take the initial data only the first time the page is loaded
         # and keep it until it is cleared.
         # dcc.Store(id='store', storage_type='local'),
-        dcc.Store(id='store'),
+        dcc.Store(id='store', storage_type='session'),
         # Same as the local store but will lose the data when the browser/tab closes.
         dcc.Store(id='session-store', storage_type='session'),
         dcc.Interval(
