@@ -193,7 +193,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                     # self.debug_data['error'] = str(e) + " " + traceback.format_exc()
                     exs = str(e)
                     track = traceback.format_exc()
-                    with open(app_base_directory + "/error.txt", "a+") as f:
+                    with open(app_base_directory + "error.txt", "a+") as f:
                         f.write(str(datetime.now()) + " " + track)
 
                     raise Exception(exs)
