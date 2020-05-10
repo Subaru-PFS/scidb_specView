@@ -5,7 +5,7 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
-from specviewer import app, refresh_time
+from specviewer import app, refresh_time, app_base_directory
 from datetime import datetime
 import time
 from dash import no_update
@@ -193,7 +193,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                     # self.debug_data['error'] = str(e) + " " + traceback.format_exc()
                     exs = str(e)
                     track = traceback.format_exc()
-                    with open("/home/mtp/ManuWork/python/scidb_specView_new/error.txt", "a+") as f:
+                    with open(app_base_directory + "/error.txt", "a+") as f:
                         f.write(str(datetime.now()) + " " + track)
 
                     raise Exception(exs)
@@ -336,7 +336,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                 except Exception as e:
                     exs = str(e)
                     track = traceback.format_exc()
-                    with open("/home/mtp/ManuWork/python/scidb_specView_new/error.txt", "a+") as f:
+                    with open(app_base_directory + "error.txt", "a+") as f:
                         f.write(str(datetime.now()) + " " + track)
 
                     # self.debug_data['error'] = str(e) + " " + traceback.format_exc()

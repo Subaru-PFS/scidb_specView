@@ -2,7 +2,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from specviewer import app, refresh_time
+from specviewer import app, refresh_time, app_base_directory
 from jupyterlab_dash import AppViewer
 from plotly.tools import mpl_to_plotly
 from matplotlib import pyplot as plt
@@ -301,7 +301,7 @@ class Viewer():
     def write_info(self, info, file_endding=''):
         if file_endding != '':
             file_endding = '_' + file_endding
-        with open('/home/mtp/ManuWork/python/scidb_specView_new/info' + file_endding +'.txt', 'a+') as f:
+        with open(app_base_directory +  'info' + file_endding +'.txt', 'a+') as f:
             f.write(str(datetime.now()) + " " + info + "\n")
 
 
@@ -321,3 +321,14 @@ class Viewer():
     def get_data_dict(self, data):
         #return json.loads(data) if data is not None else self.build_app_data()
         return data if data is not None else self.build_app_data()
+
+
+########  Trace manipulation/analysis
+
+
+    def smooth(self, trace_name, kernel, ):
+        #https://specutils.readthedocs.io/en/stable/manipulation.html
+        return None
+
+    def resample(self):
+        return None
