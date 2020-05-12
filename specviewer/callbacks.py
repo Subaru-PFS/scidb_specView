@@ -149,15 +149,21 @@ def load_callbacks(self): # self is passed as the Viewer class
             @app.callback(
                 Output('store', 'data'),
                 [Input("remove_trace_button", "n_clicks"),
-                 Input('upload-data', 'contents')],
+                 Input('upload-data', 'contents'),
+                 Input('trace_smooth_button', 'n_clicks'),
+                 Input('trace_unsmooth_button', 'n_clicks'),
+                ],
                 [State('upload-data', 'filename'),
                  State('upload-data', 'last_modified'),
                  State('store', 'data'),
                  State('store', 'modified_timestamp'),
-                 State('dropdown-for-traces', 'value')
+                 State('dropdown-for-traces', 'value'),
+                 State('smoothing_kernels_dropdown', 'value'),
+                 State('kernel_width_box', 'value')
                  ])
             # def process_input(n_intervals, list_of_contents, list_of_names, list_of_dates, data, dropdown_values):
-            def process_input(n_clicks, list_of_contents, list_of_names, list_of_dates, data,data_timestamp,dropdown_values):
+            def process_input(n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button, n_clicks_unsmooth_button, list_of_names,
+                              list_of_dates, data,data_timestamp,dropdown_trace_names,smoothing_kernel_name,smoothing_kernel_width):
                 try:
 
                     # self.debug_data['process_uploaded_file'] = "process_uploaded_file"
@@ -180,11 +186,22 @@ def load_callbacks(self): # self is passed as the Viewer class
                         #return json.dumps(data_dict)
                         return data_dict
 
-                    elif task_name == "remove_trace_button" and len(dropdown_values) > 0:
+                    elif task_name == "remove_trace_button" and len(dropdown_trace_names) > 0:
                         data_dict = self.get_data_dict(data)
-                        self._remove_traces(dropdown_values, data_dict, do_update_client=False)
+                        self._remove_traces(dropdown_trace_names, data_dict, do_update_client=False)
                         #return json.dumps(data_dict)
                         return data_dict
+
+                    elif task_name == "trace_smooth_button" and len(dropdown_trace_names)>0 and len(smoothing_kernel_name) > 0:
+                        data_dict = self.get_data_dict(data)
+                        self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False, kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),kernel_function=None)
+                        return data_dict
+
+                    elif task_name == "trace_unsmooth_button" and len(dropdown_trace_names)>0:
+                        data_dict = self.get_data_dict(data)
+                        self._unsmooth_trace(dropdown_trace_names, data_dict, do_update_client=False)
+                        return data_dict
+
                     else:
                         return no_update
 
@@ -261,7 +278,8 @@ def load_callbacks(self): # self is passed as the Viewer class
             @app.callback(
                 Output('store', 'data'),
                 #[Input('synch_interval', 'n_intervals'), Input('upload-data', 'contents')],
-                [Input('synch_interval', 'n_intervals'), Input("remove_trace_button", "n_clicks"), Input('upload-data', 'contents')],
+                [Input('synch_interval', 'n_intervals'), Input("remove_trace_button", "n_clicks"),
+                 Input('upload-data', 'contents'), Input('trace_smoothing_button', 'contents'),  ],
                 [State('upload-data', 'filename'),
                  State('upload-data', 'last_modified'),
                  State('store', 'data'),

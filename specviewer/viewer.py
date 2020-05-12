@@ -42,6 +42,7 @@ from astropy.io import fits
 import traceback
 import dash_table
 from pathlib import Path
+from astropy.convolution import convolve, Gaussian1DKernel, Box1DKernel
 
 process_manager = multiprocessing.Manager()
 jupyter_viewer = AppViewer()
@@ -135,7 +136,7 @@ class Viewer():
             self.spec_figure = make_subplots(rows=1, cols=1)
             traces = self.app_data.get("traces", {})
             for trace_name in traces:
-                scatter = go.Scattergl(x=traces[trace_name]['x_coords'], y=traces[trace_name]['y_coords'],
+                scatter = go.Scatter(x=traces[trace_name]['x_coords'], y=traces[trace_name]['y_coords'],
                                      mode="lines+markers",
                                      name=traces[trace_name]['name'], marker={'size': 12}, line=dict(color="blue"),
                                      text=['a', 'b', 'c', 'd'], customdata=['c.a', 'c.b', 'c.c', 'c.d'])
@@ -149,7 +150,7 @@ class Viewer():
             name = "Trace 1"
             # trace = self.build_trace(wavelength=x, flux=y, name=name)
             # self.app_data['traces'][name] = trace
-            scatter = go.Scattergl(x=x, y=y, mode="lines+markers",
+            scatter = go.Scatter(x=x, y=y, mode="lines+markers",
                                  name=name, marker={'size': 12}, line=dict(color="blue"),
                                  text=['a', 'b', 'c', 'd'], customdata=['c.a', 'c.b', 'c.c', 'c.d'])
             self.spec_figure.add_trace(scatter, row=1, col=1)
@@ -160,7 +161,7 @@ class Viewer():
         figure = make_subplots(rows=1, cols=1)
         traces = data.get("traces", {})
         for trace_name in traces:
-            scatter = go.Scattergl(x=traces[trace_name]['x_coords'], y=traces[trace_name]['y_coords'],
+            scatter = go.Scatter(x=traces[trace_name]['x_coords'], y=traces[trace_name]['y_coords'],
                                  mode="lines",
                                  name=traces[trace_name]['name'], marker={'size': 12}, line=dict(color="blue"),
                                  text=['a', 'b', 'c', 'd'], customdata=['c.a', 'c.b', 'c.c', 'c.d'])
@@ -248,9 +249,9 @@ class Viewer():
         self.update_client()
 
     def build_trace(self, x_coords=[], y_coords=[], name=None, parent=None, type=None, color="black", linewidth=1,
-                    alpha=1.0):
+                    alpha=1.0, x_coords_original=None, y_coords_original=None):
         return {'name': name, 'x_coords': x_coords, 'y_coords': y_coords, 'type': type, 'parent': parent,
-                'visible': True, 'color': color, 'linewidth': linewidth, 'alpha': alpha}
+                'visible': True, 'color': color, 'linewidth': linewidth, 'alpha': alpha, 'x_coords_original': x_coords_original, 'y_coords_original': y_coords_original}
 
     def build_new_app_data(self, spec_traces=[], spec_layout=[], spec_selection = {}):
         return {'spec_figure': {'data':spec_traces, 'laylout':spec_layout }, 'spec_selection':spec_selection}
@@ -326,9 +327,50 @@ class Viewer():
 ########  Trace manipulation/analysis
 
 
-    def smooth(self, trace_name, kernel, ):
-        #https://specutils.readthedocs.io/en/stable/manipulation.html
-        return None
+    def _unsmooth_trace(self, trace_names, application_data, do_update_client=True):
+        for trace_name in trace_names:
+            trace = application_data['traces'].get(trace_name)
+            if trace['y_coords_original'] is not None and len(trace['y_coords_original'])>0:
+                trace['y_coords'] = trace.get('y_coords_original')
+                trace['y_coords_original'] = []
+                application_data['traces'][trace_name] = trace
+
+        if do_update_client:
+            self.update_client()
+
+
+    def _smooth_trace(self, trace_names, application_data, do_update_client=True, kernel="Gaussian1DKernel", kernel_width=20, kernel_function=None):
+        # https://specutils.readthedocs.io/en/stable/manipulation.html
+        # https://docs.astropy.org/en/stable/convolution/kernels.html
+        for trace_name in trace_names:
+            if trace_name in application_data['traces']:
+                trace = application_data['traces'].get(trace_name)
+
+                if kernel_function is None:
+                    if kernel == "Gaussian1DKernel":
+                        kernel_func = Gaussian1DKernel(int(kernel_width))
+                    elif kernel == "Box1DKernel":
+                        kernel_func = Box1DKernel(int(kernel_width))
+                    else:
+                        raise Exception("Unsupported kernel " + str(kernel))
+                else:
+                    kernel_func = kernel_function
+
+                if trace.get('y_coords_original') is None or len(trace['y_coords_original']) == 0: # has not been smoothed yet
+                    smoothed_trace = convolve(trace['y_coords'], kernel_func)
+                    trace['y_coords_original'] = trace.get('y_coords')
+                else: # has been smoothed already; use original trace values
+                    smoothed_trace = convolve(trace['y_coords_original'], kernel_func)
+
+                trace['y_coords'] = smoothed_trace
+                application_data['traces'][trace_name] = trace
+                #application_data['traces'].pop(trace_name)
+                #application_data['traces'][trace_name+"_smoothed"] = trace
+
+        if do_update_client:
+            self.update_client()
+
+
 
     def resample(self):
         return None

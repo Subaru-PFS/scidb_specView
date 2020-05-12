@@ -39,12 +39,13 @@ function build_figure_data(data){
         traces = []
         for(i=0; i<trace_names.length; i++){
             trace_name = trace_names[i]
-            trace_data = data.traces[trace_name]
+            //trace_data = data.traces[trace_name]
             trace = {   name:data.traces[trace_name].name,
                         x: data.traces[trace_name].x_coords,
                         y: data.traces[trace_name].y_coords,
                         mode: "lines",
-                        type: 'scattergl',
+                        type: 'scatter',
+                        //type: 'scattergl',
                         visible: data.traces[trace_name].visible,
                         color: data.traces[trace_name].color,
                         xaxis: "x",
@@ -79,8 +80,8 @@ function build_figure_layout(){
         title:{text: "SpecViewer", y: 0.9, x: 0.5, xanchor: 'center', yanchor: 'top'},
         title: {font: {size: 30}, text: "SpecViewer", y: 0.9, x: 0.5, xanchor: "center", yanchor: "top"},
         font: {family: "Courier New, monospace", size: 18, color: "#7f7f7f"},
-        xaxis: {anchor: "y", domain: [0,1], title: {text: "Wavelength"} },
-        yaxis: {anchor: "x", domain: [0,1], title: {text: "Flux"}},
+        xaxis: {anchor: "y", domain: [0,1], title: {text: "Wavelength"}, showgrid:false, showline:false  },
+        yaxis: {anchor: "x", domain: [0,1], title: {text: "Flux"}, showgrid:false, showline:false },
 
         xaxis_title:"Wavelength", yaxis_title:"Flux",
         font:{family:"Courier New, monospace", size:18, color:"#7f7f7f"},

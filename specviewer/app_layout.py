@@ -63,6 +63,20 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
             style={}
         ),
         html.Button("Remove trace", id="remove_trace_button"),
+        html.Div(["Smoothing controls:"]),
+        dcc.Dropdown(
+            id='smoothing_kernels_dropdown',
+            options=[{'label': "Gaussian1DKernel", 'value': "Gaussian1DKernel"},{'label': "Box1DKernel", 'value': "Box1DKernel"}],
+            value='Gaussian1DKernel',
+            placeholder="Select Smoothing kernel",
+            multi=False,
+            style={}
+        ),
+        html.Div(["Kernel Width:"]),
+        html.Div(dcc.Input(id='kernel_width_box', value='20', type='number')),
+        html.Button('Smooth spectrum', id='trace_smooth_button'),
+        html.Button('Unsmooth spectrum', id='trace_unsmooth_button'),
+
         html.Div(dcc.Input(id='input-box', type='text')),
         html.Button('Submit', id='button'),
         html.Div(id='output-container-button',
