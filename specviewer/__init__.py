@@ -21,15 +21,4 @@ app.server.secret_key = 'SOME_KEY_STRING'
 refresh_time = REFRESH_TIME
 app_base_directory = APP_BASE_DIRECTORY
 
-#from specviewer import viewer
-#from specviewer.viewer import Viewer
-
-from specviewer.viewer import Viewer as Viewer, app as app2
-viewer = Viewer(as_website=True)
-
-
-a= """
-website = DispatcherMiddleware(server, {
-    '/specviewer': app.server,
-})
-"""
+from specviewer.viewer import Viewer
