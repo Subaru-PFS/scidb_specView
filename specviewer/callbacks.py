@@ -117,34 +117,34 @@ def load_callbacks(self): # self is passed as the Viewer class
 
     """
 
+        # update main spec figure every time the data changes
+        # @app.callback(
+        app.clientside_callback(
+            ClientsideFunction(
+                namespace='clientside',
+                function_name='set_figure'
+            ),
+            Output('spec-graph', 'figure'),
+            # [Input('store', 'data')],
+            [Input('store', 'modified_timestamp')],
+            [State('store', 'data')]
+        )
+
+        # update dropdown of traces every time the data changes
+        app.clientside_callback(
+            ClientsideFunction(
+                namespace='clientside',
+                function_name='set_dropdown_options'
+            ),
+            Output('dropdown-for-traces', 'options'),
+            # [Input('store', 'data')]
+            # [Input('store', 'data')],
+            [Input('store', 'modified_timestamp')],
+            [State('store', 'data')]
+        )
 
         if self.as_website:
 
-            # update main spec figure every time the data changes
-            # @app.callback(
-            app.clientside_callback(
-                ClientsideFunction(
-                    namespace='clientside',
-                    function_name='set_figure'
-                ),
-                Output('spec-graph', 'figure'),
-                # [Input('store', 'data')],
-                [Input('store', 'modified_timestamp')],
-                [State('store', 'data')]
-            )
-
-            # update dropdown of traces every time the data changes
-            app.clientside_callback(
-                ClientsideFunction(
-                    namespace='clientside',
-                    function_name='set_dropdown_options'
-                ),
-                Output('dropdown-for-traces', 'options'),
-                # [Input('store', 'data')]
-                # [Input('store', 'data')],
-                [Input('store', 'modified_timestamp')],
-                [State('store', 'data')]
-            )
 
             @app.callback(
                 Output('store', 'data'),
@@ -228,6 +228,8 @@ def load_callbacks(self): # self is passed as the Viewer class
 
             # update main spec figure every time the data changes
 
+            a = """
+
             @app.callback(
                 Output('spec-graph', 'figure'),
                 [Input('store', 'modified_timestamp')],
@@ -245,22 +247,6 @@ def load_callbacks(self): # self is passed as the Viewer class
                 else:
                     self.write_info("UPDATE FIGURE: data is empty")
                     return no_update
-            b = '''
-                    app.clientside_callback(
-                        """
-                        function(data) {
-                            return {
-                                'data': data,
-                                'layout': {
-                                     'yaxis': {'type': scale}
-                                 }
-                            }
-                        }
-                        """,
-                        Output('spec-graph', 'figure'),
-                        [Input('store', 'data')]
-                    )
-                    '''
 
             # update dropdown of traces every time the data changes
             @app.callback(
@@ -275,19 +261,27 @@ def load_callbacks(self): # self is passed as the Viewer class
                 self.write_info("UPDATE DROPDOWN: end")
                 return dropdown_options
 
+            """
+
             @app.callback(
                 Output('store', 'data'),
-                #[Input('synch_interval', 'n_intervals'), Input('upload-data', 'contents')],
-                [Input('synch_interval', 'n_intervals'), Input("remove_trace_button", "n_clicks"),
-                 Input('upload-data', 'contents'), Input('trace_smoothing_button', 'contents'),  ],
+                [Input('synch_interval', 'n_intervals'),
+                 Input("remove_trace_button", "n_clicks"),
+                 Input('upload-data', 'contents'),
+                 Input('trace_smooth_button', 'n_clicks'),
+                 Input('trace_unsmooth_button', 'n_clicks'),
+                ],
                 [State('upload-data', 'filename'),
                  State('upload-data', 'last_modified'),
                  State('store', 'data'),
                  State('store', 'modified_timestamp'),
-                 State('dropdown-for-traces', 'value')
+                 State('dropdown-for-traces', 'value'),
+                 State('smoothing_kernels_dropdown', 'value'),
+                 State('kernel_width_box', 'value')
                  ])
             #def process_input(n_intervals, list_of_contents, list_of_names, list_of_dates, data, dropdown_values):
-            def process_input(n_intervals, n_clicks, list_of_contents, list_of_names, list_of_dates, data, data_timestamp, dropdown_values):
+            def process_input(n_intervals, n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button, n_clicks_unsmooth_button, list_of_names,
+                              list_of_dates, data, data_timestamp, dropdown_trace_names,smoothing_kernel_name,smoothing_kernel_width):
                 try:
                     task_name = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
                     if task_name == "synch_interval":
@@ -323,17 +317,33 @@ def load_callbacks(self): # self is passed as the Viewer class
                             [trace for trace in self.app_data['traces']]))
                         return data_dict
 
-                    elif task_name == "remove_trace_button" and len(dropdown_values) > 0:
-                        self.write_info("Remove data button: remove of " + str(dropdown_values))
+                    elif task_name == "remove_trace_button" and len(dropdown_trace_names) > 0:
+                        self.write_info("Remove data button: remove of " + str(dropdown_trace_names))
                         data_dict = self.get_data_dict(data)
                         self.write_info("Remove data button: Initial Traces in datadict: " + str(
                             [trace for trace in data_dict['traces']]) + ", Initial Traces in appdate: " + str(
                             [trace for trace in self.app_data['traces']]))
-                        self._remove_traces(dropdown_values, data_dict, do_update_client=False)
-                        self._remove_traces(dropdown_values, self.app_data, do_update_client=False)
+                        self._remove_traces(dropdown_trace_names, data_dict, do_update_client=False)
+                        self._remove_traces(dropdown_trace_names, self.app_data, do_update_client=False)
                         self.write_info("Remove data button: remove ended. Traces in datadict: " + str(
                             [trace for trace in data_dict['traces']]) + ", Traces in appdata: " + str(
                             [trace for trace in self.app_data['traces']]))
+                        return data_dict
+
+                    elif task_name == "trace_smooth_button" and len(dropdown_trace_names)>0 and len(smoothing_kernel_name) > 0:
+                        data_dict = self.get_data_dict(data)
+                        self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False,
+                                           kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),
+                                           kernel_function=None)
+                        self._smooth_trace(dropdown_trace_names, self.app_data, do_update_client=False,
+                                           kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),
+                                           kernel_function=None)
+                        return data_dict
+
+                    elif task_name == "trace_unsmooth_button" and len(dropdown_trace_names)>0:
+                        data_dict = self.get_data_dict(data)
+                        self._unsmooth_trace(dropdown_trace_names, data_dict, do_update_client=False)
+                        self._unsmooth_trace(dropdown_trace_names, self.app_data, do_update_client=False)
                         return data_dict
 
                     else:
@@ -341,9 +351,9 @@ def load_callbacks(self): # self is passed as the Viewer class
                         do_update = False
                         if data is None:
                             return no_update
-                        self.write_info("CHECK: traces in dropdown: " + str(dropdown_values) + " , traces in datadict: " + str([t for t in data['traces']]) )
+                        self.write_info("CHECK: traces in dropdown: " + str(dropdown_trace_names) + " , traces in datadict: " + str([t for t in data['traces']]) )
                         for trace_name in data['traces']:
-                            if trace_name not in dropdown_values:
+                            if trace_name not in dropdown_trace_names:
                                 do_update = True
                         if do_update:
                             return data
