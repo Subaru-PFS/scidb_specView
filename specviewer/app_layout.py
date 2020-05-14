@@ -76,8 +76,8 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                         html.Span(["Kernel:"]),
                         dcc.Dropdown(
                             id='smoothing_kernels_dropdown',
-                            options=[{'label': "Gaussian1DKernel", 'value': "Gaussian1DKernel"},
-                                     {'label': "Box1DKernel", 'value': "Box1DKernel"}],
+                            options=[{'label': "Gaussian", 'value': "Gaussian1DKernel"},
+                                     {'label': "Box", 'value': "Box1DKernel"}],
                             value='Gaussian1DKernel',
                             placeholder="Select Smoothing kernel",
                             multi=False,
