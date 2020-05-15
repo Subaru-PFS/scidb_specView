@@ -127,7 +127,7 @@ function build_figure_layout(x_axis_label="Wavelength", y_axis_label="Flux"){
         //height: map_height,
 
         //title:{text: "SpecViewer", y: 0.9, x: 0.5, xanchor: 'center', yanchor: 'top'},
-        title: {font: {size: 30}, text: "SpecViewer", y: 0.9, x: 0.5, xanchor: "center", yanchor: "top"},
+        //title: {font: {size: 30}, text: "SpecViewer", y: 0.9, x: 0.5, xanchor: "center", yanchor: "top"},
         font: {family: "Courier New, monospace", size: 18, color: "#7f7f7f"},
         xaxis: {anchor: "y", title: {text: x_axis_label}, showgrid:false},
         yaxis: {anchor: "x", title: {text: y_axis_label}, showgrid:false},

@@ -103,7 +103,8 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
             ]),
             ## next column --------------------------------------------------------------------------------------------
             html.Div(id="top-panel-div2", className="col-md-10", style={}, children=[
-
+                html.Br(),
+                html.H1(["Spectrum Viewer"] , className="text-center"),
                 dcc.Graph(
                     id='spec-graph',
                     figure=self.spec_figure,
