@@ -3,6 +3,11 @@ from enum import Enum
 import json
 
 
+class WavelenghUnit:
+    ANGSTROM = "angstrom"
+    NANOMETER = "nanometer"
+
+
 class Trace:
     def __init__(self,name=None, x_coords=None, y_coords=None, color="black", linewidth=1, alpha=1):
         self.x_coords = x_coords

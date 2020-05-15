@@ -1,4 +1,5 @@
 from specviewer import refresh_time
+from specviewer.data_models import WavelenghUnit
 import dash_core_components as dcc
 import dash_html_components as html
 from textwrap import dedent as d
@@ -81,7 +82,8 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             value='Gaussian1DKernel',
                             placeholder="Select Smoothing kernel",
                             multi=False,
-                            style={}
+                            style={},
+                            clearable = False
                         )
                     ]),
                     html.Div(className="col-md-6", children=[
@@ -109,6 +111,26 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     config={'displayModeBar': True, 'scrollZoom': False},
                     animate=True
                 ),
+                html.Div(className="row",children=[
+                    html.Div(className="col-md-2", children=[
+                        html.H3(["Wavelength unit"]),
+                        dcc.Dropdown(
+                            id='wavelength-unit',
+                            options=[{'label': "nanometer", 'value': WavelenghUnit.NANOMETER},
+                                     {'label': "Angstrom", 'value': WavelenghUnit.ANGSTROM}],
+                            value=WavelenghUnit.ANGSTROM,
+                            placeholder="Wavelength unit",
+                            multi=False,
+                            style={}, clearable=False
+                        ),
+                    ]),
+                    html.Div(className="col-md-10", children=[
+
+                    ])
+                ]),
+
+
+
                 html.Div(style={'display':'none'}, children=[
 
                     html.Div(className='row', children=[

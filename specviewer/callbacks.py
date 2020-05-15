@@ -6,6 +6,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 from specviewer import app, refresh_time, app_base_directory
+from specviewer.data_models import WavelenghUnit
 from datetime import datetime
 import time
 from dash import no_update
@@ -152,6 +153,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                  Input('upload-data', 'contents'),
                  Input('trace_smooth_button', 'n_clicks'),
                  Input('trace_unsmooth_button', 'n_clicks'),
+                 Input('wavelength-unit', 'value'),
                 ],
                 [State('upload-data', 'filename'),
                  State('upload-data', 'last_modified'),
@@ -159,10 +161,10 @@ def load_callbacks(self): # self is passed as the Viewer class
                  State('store', 'modified_timestamp'),
                  State('dropdown-for-traces', 'value'),
                  State('smoothing_kernels_dropdown', 'value'),
-                 State('kernel_width_box', 'value')
+                 State('kernel_width_box', 'value'),
                  ])
             # def process_input(n_intervals, list_of_contents, list_of_names, list_of_dates, data, dropdown_values):
-            def process_input(n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button, n_clicks_unsmooth_button, list_of_names,
+            def process_input(n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button, n_clicks_unsmooth_button, wavelength_unit, list_of_names,
                               list_of_dates, data,data_timestamp,dropdown_trace_names,smoothing_kernel_name,smoothing_kernel_width):
                 try:
 
@@ -176,7 +178,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                         self.write_info("Start processing uploaded file")
                         data_dict = self.get_data_dict(data)
                         new_data = [
-                            self.parse_uploaded_file(c, n) for c, n, d in
+                            self.parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=None) for c, n, d in
                             zip(list_of_contents, list_of_names, list_of_dates)]
                         # traces = { name:trace for (name,trace) in new_data  }
                         for (name, trace) in new_data:
@@ -184,6 +186,10 @@ def load_callbacks(self): # self is passed as the Viewer class
 
                         self.write_info("End processing uploaded file")
                         #return json.dumps(data_dict)
+                        return data_dict
+                    elif task_name == 'wavelength-unit':
+                        data_dict = self.get_data_dict(data)
+                        self._rescale_axis(data_dict, to_wavelength_unit=wavelength_unit, to_flux_unit=None)
                         return data_dict
 
                     elif task_name == "remove_trace_button" and len(dropdown_trace_names) > 0:
@@ -270,6 +276,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                  Input('upload-data', 'contents'),
                  Input('trace_smooth_button', 'n_clicks'),
                  Input('trace_unsmooth_button', 'n_clicks'),
+                 Input('wavelength-unit', 'value'),
                 ],
                 [State('upload-data', 'filename'),
                  State('upload-data', 'last_modified'),
@@ -280,7 +287,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                  State('kernel_width_box', 'value')
                  ])
             #def process_input(n_intervals, list_of_contents, list_of_names, list_of_dates, data, dropdown_values):
-            def process_input(n_intervals, n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button, n_clicks_unsmooth_button, list_of_names,
+            def process_input(n_intervals, n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button, n_clicks_unsmooth_button, wavelength_unit, list_of_names,
                               list_of_dates, data, data_timestamp, dropdown_trace_names,smoothing_kernel_name,smoothing_kernel_width):
                 try:
                     task_name = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
@@ -315,6 +322,12 @@ def load_callbacks(self): # self is passed as the Viewer class
                         self.write_info("Upload data button: ended upload. Traces in datadict: " + str(
                             [trace for trace in data_dict['traces']]) + ", Traces in appdata: " + str(
                             [trace for trace in self.app_data['traces']]))
+                        return data_dict
+
+                    elif task_name == 'wavelength-unit':
+                        data_dict = self.get_data_dict(data)
+                        self._rescale_axis(data_dict, to_wavelength_unit=wavelength_unit, to_flux_unit=None, do_update_client=False)
+                        self._rescale_axis(self.app_data, to_wavelength_unit=wavelength_unit, to_flux_unit=None, do_update_client=False)
                         return data_dict
 
                     elif task_name == "remove_trace_button" and len(dropdown_trace_names) > 0:

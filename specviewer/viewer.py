@@ -43,6 +43,7 @@ import traceback
 import dash_table
 from pathlib import Path
 from astropy.convolution import convolve, Gaussian1DKernel, Box1DKernel
+from specviewer.data_models import WavelenghUnit
 
 process_manager = multiprocessing.Manager()
 jupyter_viewer = AppViewer()
@@ -99,19 +100,20 @@ class Viewer():
 
 
 
-    def parse_uploaded_file(self, contents, filename):
+    def parse_uploaded_file(self, contents, filename, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=None):
 
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
         hdulist = fits.open(io.BytesIO(decoded))
+        # assumes that spectrum wavelength units are in Armstrong:
         spectrum = data_driver.get_spectrum_from_fits(hdulist, filename)
 
         # name = filename + str(len(hdulist))
         # trace = self.build_trace(x_coords=[1,2,3,4], [float(np.random.random_sample()) for i in range(4)], filename)
-        trace = self.build_trace(x_coords=[1, 2, 3, 4], y_coords=[float(np.random.random_sample()) for i in range(4)],
-                                 name=filename)
-        trace = self.build_trace(spectrum.wavelength, spectrum.flux, filename, color="black", linewidth=1, alpha=0.8)
-        return filename, trace
+        #trace = self.build_trace(x_coords=[1, 2, 3, 4], y_coords=[float(np.random.random_sample()) for i in range(4)],name=filename, wavelength_unit=wavelength_unit)
+        trace = self.build_trace(spectrum.wavelength, spectrum.flux, filename, color="black", linewidth=1, alpha=0.8, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=None)
+        rescaled_trace = self.get_rescaled_axis_in_trace(trace, to_wavelength_unit=wavelength_unit, to_flux_unit=flux_unit)
+        return filename, rescaled_trace
 
     def update_figure_layout(self):
         time = str(datetime.now())
@@ -249,9 +251,11 @@ class Viewer():
         self.update_client()
 
     def build_trace(self, x_coords=[], y_coords=[], name=None, parent=None, type=None, color="black", linewidth=1,
-                    alpha=1.0, x_coords_original=None, y_coords_original=None):
+                    alpha=1.0, x_coords_original=None, y_coords_original=None, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=None):
         return {'name': name, 'x_coords': x_coords, 'y_coords': y_coords, 'type': type, 'parent': parent,
-                'visible': True, 'color': color, 'linewidth': linewidth, 'alpha': alpha, 'x_coords_original': x_coords_original, 'y_coords_original': y_coords_original}
+                'visible': True, 'color': color, 'linewidth': linewidth, 'alpha': alpha,
+                'x_coords_original': x_coords_original, 'y_coords_original': y_coords_original,
+                'wavelength_unit':wavelength_unit, "flux_unit":flux_unit}
 
     def build_new_app_data(self, spec_traces=[], spec_layout=[], spec_selection = {}):
         return {'spec_figure': {'data':spec_traces, 'laylout':spec_layout }, 'spec_selection':spec_selection}
@@ -370,6 +374,25 @@ class Viewer():
         if do_update_client:
             self.update_client()
 
+
+    def _rescale_axis(self, application_data, to_wavelength_unit=WavelenghUnit.ANGSTROM, to_flux_unit=None, do_update_client=False):
+        for trace_name in application_data['traces']:
+           rescaled_trace = self.get_rescaled_axis_in_trace(application_data['traces'][trace_name], to_wavelength_unit, to_flux_unit)
+           application_data['traces'][trace_name] = rescaled_trace
+        if do_update_client:
+            self.update_client()
+
+    def get_rescaled_axis_in_trace(self, trace, to_wavelength_unit=WavelenghUnit.ANGSTROM, to_flux_unit=None):
+        # for wavelength axis:
+        if trace.get('wavelength_unit') != to_wavelength_unit and to_wavelength_unit is not None:
+            if trace.get('wavelength_unit') == WavelenghUnit.ANGSTROM and to_wavelength_unit == WavelenghUnit.NANOMETER:
+                trace['x_coords'] = [x/10.0 for x in trace['x_coords']]
+            elif trace.get('wavelength_unit') == WavelenghUnit.NANOMETER and to_wavelength_unit == WavelenghUnit.ANGSTROM:
+                trace['x_coords'] = [x*10.0 for x in trace['x_coords']]
+            else:
+                raise Exception("Unsupported unit " + str(to_wavelength_unit) + " . Parameter to_units takes values from class WavelenghUnit.")
+        trace['wavelength_unit'] = to_wavelength_unit
+        return trace
 
 
     def resample(self):
