@@ -109,7 +109,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     figure=self.spec_figure,
                     # figure=main_figure,
                     config={'displayModeBar': True, 'scrollZoom': False},
-                    animate=True
+                    #animate=True # gives lots of problems
                 ),
                 html.Div(className="row",children=[
                     html.Div(className="col-md-2", children=[

@@ -146,6 +146,25 @@ def load_callbacks(self): # self is passed as the Viewer class
 
         if self.as_website:
 
+            dd = """
+            @app.callback(
+                Output('spec-graph', 'figure'),
+                [Input('store', 'modified_timestamp')],
+                [State('store', 'data')]
+            )
+            def update_figure(modified_timestamp, data):
+                if data is not None:
+                    #self.write_info("UPDATE FIGURE: Starting updating figure from data")
+                    #data_dict = json.loads(data)
+                    #json_string = json.dumps(data_dict)
+                    figure = self.get_spec_figure_from_data(data)
+                    #f1 = json.dumps(figure)
+                    #self.write_info("UPDATE FIGURE: End updating figure from data")
+                    return figure
+                else:
+                    #self.write_info("UPDATE FIGURE: data is empty")
+                    return no_update
+            """
 
             @app.callback(
                 Output('store', 'data'),
