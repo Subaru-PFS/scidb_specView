@@ -181,10 +181,11 @@ def load_callbacks(self): # self is passed as the Viewer class
                  State('dropdown-for-traces', 'value'),
                  State('smoothing_kernels_dropdown', 'value'),
                  State('kernel_width_box', 'value'),
+                 State('input-options-checklist', 'value'),
                  ])
             # def process_input(n_intervals, list_of_contents, list_of_names, list_of_dates, data, dropdown_values):
             def process_input(n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button, n_clicks_unsmooth_button, wavelength_unit, list_of_names,
-                              list_of_dates, data,data_timestamp,dropdown_trace_names,smoothing_kernel_name,smoothing_kernel_width):
+                              list_of_dates, data,data_timestamp,dropdown_trace_names,smoothing_kernel_name,smoothing_kernel_width, input_checklist):
                 try:
 
                     # self.debug_data['process_uploaded_file'] = "process_uploaded_file"
@@ -194,14 +195,19 @@ def load_callbacks(self): # self is passed as the Viewer class
 
 
                     if task_name == "upload-data" and list_of_contents is not None:
+                        add_sky = True if "add_sky" in input_checklist else False
+                        add_error = True if "add_error" in input_checklist else False
+                        add_model = True if "add_model" in input_checklist else False
                         self.write_info("Start processing uploaded file")
                         data_dict = self.get_data_dict(data)
-                        new_data = [
-                            self.parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=None) for c, n, d in
+                        new_data_list = [
+                            self.parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=None, add_sky=add_sky, add_model=add_model, add_error=add_error) for c, n, d in
                             zip(list_of_contents, list_of_names, list_of_dates)]
                         # traces = { name:trace for (name,trace) in new_data  }
-                        for (name, trace) in new_data:
-                            self.add_trace_to_data(data_dict, name, trace, do_update_client=False)
+                        for traces in new_data_list:
+                            for trace in traces:
+                                self.set_color_for_new_trace(trace, data_dict)
+                                self.add_trace_to_data(data_dict, trace.get('name'), trace, do_update_client=False)
 
                         self.write_info("End processing uploaded file")
                         #return json.dumps(data_dict)
@@ -303,11 +309,12 @@ def load_callbacks(self): # self is passed as the Viewer class
                  State('store', 'modified_timestamp'),
                  State('dropdown-for-traces', 'value'),
                  State('smoothing_kernels_dropdown', 'value'),
-                 State('kernel_width_box', 'value')
+                 State('kernel_width_box', 'value'),
+                 State('input-options-checklist', 'value'),
                  ])
             #def process_input(n_intervals, list_of_contents, list_of_names, list_of_dates, data, dropdown_values):
             def process_input(n_intervals, n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button, n_clicks_unsmooth_button, wavelength_unit, list_of_names,
-                              list_of_dates, data, data_timestamp, dropdown_trace_names,smoothing_kernel_name,smoothing_kernel_width):
+                              list_of_dates, data, data_timestamp, dropdown_trace_names,smoothing_kernel_name,smoothing_kernel_width, input_checklist):
                 try:
                     task_name = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
                     if task_name == "synch_interval":
@@ -328,19 +335,26 @@ def load_callbacks(self): # self is passed as the Viewer class
 
                     elif task_name == "upload-data" and list_of_contents is not None:
                         self.write_info("Upload data button: start upload")
+                        add_sky = True if "add_sky" in input_checklist else False
+                        add_error = True if "add_error" in input_checklist else False
+                        add_model = True if "add_model" in input_checklist else False
+
                         data_dict = self.get_data_dict(data)
-                        new_data = [
-                            self.parse_uploaded_file(c, n) for c, n, d in
+                        new_data_list = [
+                            self.parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=None, add_sky=add_sky, add_model=add_model, add_error=add_error) for c, n, d in
                             zip(list_of_contents, list_of_names, list_of_dates)]
                         #traces = { name:trace for (name,trace) in new_data }
-                        for (name, trace) in new_data:
-                            self.write_info("Upload data button: adding trace " + name + " to datadict")
-                            self.add_trace_to_data(data_dict, name, trace, do_update_client=False)
-                            self.write_info("Upload data button: adding trace " + name + " to add_data")
-                            self.add_trace_to_data(self.app_data, name, trace, do_update_client=False)
+                        for traces in new_data_list:
+                            for trace in traces:
+                                self.write_info("Upload data button: adding trace " + trace.get('name') + " to datadict")
+                                self.set_color_for_new_trace(trace, data_dict)
+                                self.add_trace_to_data(data_dict, trace.get('name'), trace, do_update_client=False)
+                                self.add_trace_to_data(self.app_data, trace.get('name'), trace, do_update_client=False)
+
                         self.write_info("Upload data button: ended upload. Traces in datadict: " + str(
                             [trace for trace in data_dict['traces']]) + ", Traces in appdata: " + str(
                             [trace for trace in self.app_data['traces']]))
+
                         return data_dict
 
                     elif task_name == 'wavelength-unit':

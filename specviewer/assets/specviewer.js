@@ -56,6 +56,10 @@ function get_x_range(data){
 
 
 function get_wavelength_unit(data){
+
+    if(data == null){
+        return "Wavelength"
+    }
     trace_names = Object.keys(data.traces)
     if(trace_names.length == 0){
         return "Wavelength"

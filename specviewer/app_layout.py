@@ -39,6 +39,21 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
 
             ## first column --------------------------------------------------------------------------------------------
             html.Div(id="top-panel-div1", className="col-md-2", style={}, children=[
+                html.H2(["Data Input:"]),
+                html.Br(),
+                dcc.Checklist(
+                    id="input-options-checklist",
+                    options=[
+                        {'label': 'add model', 'value': 'add_model'},
+                        {'label': 'add sky', 'value': 'add_sky'},
+                        {'label': 'add error', 'value': 'add_error'},
+                    ],
+                    value=[],  # 'add_model'
+                    labelStyle={'display': 'inline-block'},
+                    persistence=True,
+                    persistence_type="session",
+                    persisted_props=["value"],
+                ),
                 dcc.Upload(id='upload-data',className="upload", children=html.Div([
                         html.A('Upload file(s)')
                     ]),
@@ -55,7 +70,10 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     # Allow multiple files to be uploaded
                     multiple=True
                 ),
-                html.H2(["Select Spectrum or Trace:"]),
+                html.Br(),
+                html.Hr(),
+                html.Br(),
+                html.H2(["Actions on trace(s):"]),
                 dcc.Dropdown(
                     id='dropdown-for-traces',
                     options=[],  # [{'label': label, 'value': label} for label in labels],
@@ -66,8 +84,6 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     style={}
                 ),
                 html.Br(),
-                html.Br(),
-                html.H3(["Deletion:"]),
                 html.Button("Remove trace", id="remove_trace_button"),
                 html.Br(),
                 html.Br(),
@@ -87,13 +103,13 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                         )
                     ]),
                     html.Div(className="col-md-6", children=[
-                        html.Span(["Width2:"]),
+                        html.Span(["Width:"]),
                         html.Div(dcc.Input(id='kernel_width_box', value='20', type='number')),
                     ]),
                 ]),
                 html.Br(),
-                html.Button('Smooth spectrum', id='trace_smooth_button'),
-                html.Button('Unsmooth spectrum', id='trace_unsmooth_button'),
+                html.Button('Smooth', id='trace_smooth_button'),
+                html.Button('Unsmooth', id='trace_unsmooth_button'),
 
                 html.Div(dcc.Input(style={'display':'none'}, id='input-box', type='text')),
                 html.Button('Submit', id='button', style={'display':'none'}),

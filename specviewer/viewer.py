@@ -44,6 +44,7 @@ import dash_table
 from pathlib import Path
 from astropy.convolution import convolve, Gaussian1DKernel, Box1DKernel
 from specviewer.data_models import WavelenghUnit
+from specviewer.colors import get_next_color
 
 process_manager = multiprocessing.Manager()
 jupyter_viewer = AppViewer()
@@ -98,22 +99,41 @@ class Viewer():
         app.layout = app_layout.load_app_layout(self)
         callbacks.load_callbacks(self)
 
+    def get_new_trace_color(self,application_data):
+        traces = application_data['traces']
 
 
-    def parse_uploaded_file(self, contents, filename, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=None):
+
+
+
+    def parse_uploaded_file(self, contents, file_name, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=None, add_sky=False, add_model=False, add_error=False):
 
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
         hdulist = fits.open(io.BytesIO(decoded))
+
+        if "." in file_name:
+            file_name_parts = file_name.split(".")
+            file_name = ".".join(file_name_parts[:(len(file_name_parts)-1)])
+
         # assumes that spectrum wavelength units are in Armstrong:
-        spectrum = data_driver.get_spectrum_from_fits(hdulist, filename)
+        spectrum_list = data_driver.get_spectrum_list_from_fits(hdulist, file_name, add_sky=add_sky, add_model=add_model, add_error=add_error)
 
         # name = filename + str(len(hdulist))
         # trace = self.build_trace(x_coords=[1,2,3,4], [float(np.random.random_sample()) for i in range(4)], filename)
         #trace = self.build_trace(x_coords=[1, 2, 3, 4], y_coords=[float(np.random.random_sample()) for i in range(4)],name=filename, wavelength_unit=wavelength_unit)
-        trace = self.build_trace(spectrum.wavelength, spectrum.flux, filename, color="black", linewidth=1, alpha=0.8, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=None)
-        rescaled_trace = self.get_rescaled_axis_in_trace(trace, to_wavelength_unit=wavelength_unit, to_flux_unit=flux_unit)
-        return filename, rescaled_trace
+        rescaled_traces = []
+        for spectrum in spectrum_list:
+            trace = self.build_trace(spectrum.wavelength, spectrum.flux, spectrum.name, color="black", linewidth=1, alpha=0.8, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=None)
+            rescaled_traces.append(self.get_rescaled_axis_in_trace(trace, to_wavelength_unit=wavelength_unit, to_flux_unit=flux_unit))
+        return rescaled_traces
+
+
+    def set_color_for_new_trace(self, trace, application_data):
+        current_traces_colors = [application_data['traces'][trace_name]['color'] for trace_name in application_data['traces']]
+        new_color = get_next_color(current_traces_colors)
+        trace['color'] = new_color
+
 
     def update_figure_layout(self):
         time = str(datetime.now())

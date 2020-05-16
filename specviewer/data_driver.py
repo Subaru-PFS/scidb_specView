@@ -41,11 +41,11 @@ def get_object_type(hdulist):
     raise Exception("Unknown data model for input file.")
 
 
-def get_spectrum_from_fits(hdulist, name):
+def get_spectrum_list_from_fits(hdulist, name, add_sky=False, add_model=False, add_error=False):
+
+    spectrum_list = []
 
     object_type = get_object_type(hdulist)
-    spectrum = Spectrum()
-    spectrum.name = name
 
     if object_type == object_types["ZObject"]:
         coaddData =1 # the index of Coadd data in the HDU list
@@ -54,20 +54,46 @@ def get_spectrum_from_fits(hdulist, name):
         z=hdulist[zData].data
         # the name of the data unit can be found on the official SDSS DR webpage
 
-        spectrum.wavelength = [float(10**lam) for lam in c['loglam']]
+        spectrum = Spectrum()
+        spectrum.name = name
+        wavelength = [float(10**lam) for lam in c['loglam']]
+        spectrum.wavelength = wavelength
         spectrum.flux = [float(x) for x in c['flux']]
-        spectrum.sky = [float(x) for x in c['sky']]
         spectrum.model = [float(x) for x in c['model']]
+        spectrum_list.append(spectrum)
+
+        if add_sky:
+            spectrum_sky = Spectrum()
+            spectrum_sky.name = name + "_sky"
+            spectrum_sky.wavelength = wavelength
+            spectrum_sky.flux = [float(x) for x in c['sky']]
+            spectrum_list.append(spectrum_sky)
+        if add_error:
+            spectrum_error = Spectrum()
+            spectrum_error.name = name + "_error"
+            spectrum_error.wavelength = wavelength
+            spectrum_error.flux = [np.sqrt(float(x)) for x in c['ivar']]
+            spectrum_list.append(spectrum_error)
+        if add_model:
+            spectrum_model = Spectrum()
+            spectrum_model.name = name + "_model"
+            spectrum_model.wavelength = wavelength
+            spectrum_model.flux = [float(x) for x in c['model']]
+            spectrum_list.append(spectrum_model)
+
+        return spectrum_list
 
     elif object_type == object_types["PfsObject"]:
         coaddData =2 # the index of Coadd data in the HDU list
         c=hdulist[coaddData].data
-
+        spectrum = Spectrum()
+        spectrum.name = name
         spectrum.wavelength = [float(x) for x  in c['lambda']]
         spectrum.flux = [float(x) for x  in c['flux']]
         # adding flux variance
         #flux = c['fluxvariance']
-
+        spectrum_list.append(spectrum)
+        return spectrum_list
 
     elif object_type == object_types["Lam1D"]:
 
@@ -77,12 +103,15 @@ def get_spectrum_from_fits(hdulist, name):
         l=hdulist[coaddData].data
 
         for ind in range(len(c['MODELFLUX'])):
-
-            lam = [float(x) for x in l['WAVELENGTH']]
+            spectrum = Spectrum()
+            spectrum.name = name + "_" + str(ind)
+            spectrum.wavelength = [float(x) for x in l['WAVELENGTH']]
             # adding flux
-            flux = [0.0 for s in range(len(l['WAVELENGTH']))]
+            spectrum.flux = [0.0 for s in range(len(l['WAVELENGTH']))]
+            spectrum_list.append(spectrum)
+
+        return spectrum_list
 
     else:
         raise Exception("Unknown data model for input file.")
 
-    return spectrum
