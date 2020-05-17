@@ -30,7 +30,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
         },
 
         set_figure: function(modified_timestamp, spectral_lines_switch, redshift, data) {
-            figure_data = build_figure_data(data)
+            figure_data = build_figure_data(data, spectral_lines_switch, redshift)
             //x_range = get_x_range(data)
             figure_layout = build_figure_layout(data, spectral_lines_switch=spectral_lines_switch, redshift)
             //console.log(JSON.stringify(figure_layout.xaxis))
@@ -105,10 +105,57 @@ function get_wavelength_unit(data){
 
 
 
-function build_figure_data(data){
+function build_figure_data(data, spectral_lines_switch, redshift){
+    traces = []
+
+    ranges = get_data_ranges(data)
+    wavelength_unit = get_wavelength_unit(data)
+    ranges = get_data_ranges(data)
+
+
+    var annotations = []
+    var shapes = [] // https://plotly.com/python/reference/#layout-shapes
+    if(spectral_lines_switch == true){
+
+        for(i=0; i < spectral_lines.length;i++){
+            line = spectral_lines[i]
+            x0 = (1.0+redshift)*line.lambda_vacuum
+            line_label = line.name
+            if(wavelength_unit == "nanometer")
+                x0 = x0/10.0
+            x1=x0
+            if(x0 >= ranges.x_range[0] && x0 <= ranges.x_range[1]){
+
+                y0 = ranges.y_range[0] + 0.1*(ranges.y_range[1]-ranges.y_range[0])
+                y1 = ranges.y_range[1] - 0.1*(ranges.y_range[1]-ranges.y_range[0])
+                //https://plotly.com/javascript/reference/#bar
+                trace = {   x: [x0], y:[y1], //mode: "markers+lines",
+                            name: line_label,
+                            width: [1],
+                            type: 'bar',
+                            visible: true,
+                            color: 'black',
+                            opacity: 1.0,
+                            xaxis: "x",
+                            yaxis: "y",
+                            yref: "paper",
+                            text: line_label,
+                            textposition: 'auto',
+
+                            //hoverinfo: 'none',
+                            marker:{size: 0.5, color:"black"},
+                            line:{  color:"black", width:0.5},
+                            showlegend: false
+                        }
+                //traces.push(trace)
+            }
+        }
+    }
+
+
+
     if(data != null){
         trace_names = Object.keys(data.traces)
-        traces = []
         for(i=0; i<trace_names.length; i++){
             trace_name = trace_names[i]
             //trace_data = data.traces[trace_name]
@@ -130,10 +177,8 @@ function build_figure_data(data){
             }
             traces.push(trace)
         }
-        return traces
-    }else{
-        return []
     }
+    return traces
 }
 
 
@@ -159,11 +204,13 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0){
 
                 y0 = ranges.y_range[0] + 0.1*(ranges.y_range[1]-ranges.y_range[0])
                 y1 = ranges.y_range[1] - 0.1*(ranges.y_range[1]-ranges.y_range[0])
+                y0=0
+                y1=1
 
-                line = {type: 'line', layer:'above', xref:'x', yref: 'y', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:0.5}}
+                line = {type: 'line', name:line_label,  layer:'above', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:0.5, color:"grey"}, opacity:0.5 }
                 shapes.push(line)
 
-                annotation = {showarrow: false, text: line_label, align: "center",x: x0, xanchor: "center", y: y0, yanchor: "bottom"}
+                annotation = {showarrow: false, text: line_label, align: "center",x: x0, xanchor: "center", y: 1.0, yanchor: "bottom", yref:"paper", font:{size:10, family:"Arial",color:"grey"}, opacity:1}
                 annotations.push(annotation)
             }
         }
@@ -173,11 +220,11 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0){
     var layout = {
         showlegend: true,
         dragmode: "pan",
-
+        //hovermode: "x",
+        hovermode:'closest',
         //hoverlabel: {bgcolor:"white",font_size:100,font_family:"Rockwell",width:500},
         hoverlabel: {bgcolor:"white", bordercolor: "black", align: "left", font:{font_family:"Rockwell", size:20, color:"black"}},
-        hovermode:'closest',
-        //hoverdistance: 8,
+        //hoverdistance: 100,
         //transition : {'duration': 500},
         //margin:{"l": 0, "r": 0, "t": 0, "b": 0},
         //xaxis:{showgrid:false, showline:false, zeroline:false},
