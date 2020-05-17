@@ -284,7 +284,7 @@ class Viewer():
         if traces is None:
             return {'traces': {}, 'selection':{}}
         else:
-            return {'traces': traces}
+            return {'traces': traces, 'selection':{}}
 
     def parse_contents(self, contents, filename, date):
         content_type, content_string = contents.split(',')

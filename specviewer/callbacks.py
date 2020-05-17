@@ -118,6 +118,7 @@ def load_callbacks(self): # self is passed as the Viewer class
 
     """
 
+
         # update main spec figure every time the data changes
         # @app.callback(
         app.clientside_callback(
@@ -127,7 +128,8 @@ def load_callbacks(self): # self is passed as the Viewer class
             ),
             Output('spec-graph', 'figure'),
             # [Input('store', 'data')],
-            [Input('store', 'modified_timestamp')],
+            [Input('store', 'modified_timestamp'), Input('spectral-lines-switch', 'on'),Input('redshift-slider', 'value'),],
+
             [State('store', 'data')]
         )
 
@@ -184,8 +186,10 @@ def load_callbacks(self): # self is passed as the Viewer class
                  State('input-options-checklist', 'value'),
                  ])
             # def process_input(n_intervals, list_of_contents, list_of_names, list_of_dates, data, dropdown_values):
-            def process_input(n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button, n_clicks_unsmooth_button, wavelength_unit, list_of_names,
-                              list_of_dates, data,data_timestamp,dropdown_trace_names,smoothing_kernel_name,smoothing_kernel_width, input_checklist):
+            def process_input(n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button,
+                              n_clicks_unsmooth_button, wavelength_unit,
+                              list_of_names,list_of_dates, data,data_timestamp,dropdown_trace_names,
+                              smoothing_kernel_name,smoothing_kernel_width, input_checklist):
                 try:
 
                     # self.debug_data['process_uploaded_file'] = "process_uploaded_file"
@@ -212,6 +216,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                         self.write_info("End processing uploaded file")
                         #return json.dumps(data_dict)
                         return data_dict
+
                     elif task_name == 'wavelength-unit':
                         data_dict = self.get_data_dict(data)
                         self._rescale_axis(data_dict, to_wavelength_unit=wavelength_unit, to_flux_unit=None)

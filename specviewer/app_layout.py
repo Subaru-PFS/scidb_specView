@@ -1,6 +1,7 @@
 from specviewer import refresh_time
 from specviewer.data_models import WavelenghUnit
 import dash_core_components as dcc
+import dash_daq as daq
 import dash_html_components as html
 from textwrap import dedent as d
 
@@ -125,7 +126,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     id='spec-graph',
                     figure=self.spec_figure,
                     # figure=main_figure,
-                    config={'displayModeBar': True, 'scrollZoom': False},
+                    config={'displayModeBar': True, 'scrollZoom': True, 'responsive': False, 'displaylogo': False },
                     #animate=True # gives lots of problems
                 ),
                 html.Div(className="row",children=[
@@ -141,9 +142,34 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             style={}, clearable=False
                         ),
                     ]),
-                    html.Div(className="col-md-10", children=[
+                    html.Div(className="col-md-2", children=[
+                        #https://dash.plotly.com/dash-daq/booleanswitch
+                        daq.BooleanSwitch(id="spectral-lines-switch",
+                            on=False,
+                            label="Spectral Lines",
+                            labelPosition="top",
+                            persistence=True,
+                            persistence_type="session",
+                        ),
+                        html.Br(),
+                        html.Br(),
+                        html.Br(),
+                        #https://dash.plotly.com/dash-daq/slider
+                        daq.Slider(id="redshift-slider",
+                            min=0,
+                            max=10,
+                            value=0,
+                            marks={ i: i for i in range(0,10+1)},
+                            handleLabel={"showCurrentValue": True, "label": "Redshift"},
+                            step=0.001
+                        )
+                    ]),
+                    html.Div(className="col-md-6", children=[
+                    ]),
 
-                    ])
+
+
+
                 ]),
 
 

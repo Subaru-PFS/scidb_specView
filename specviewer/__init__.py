@@ -5,7 +5,7 @@ from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 server = flask.Flask(__name__) # define flask app.server
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css','https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css']
+external_stylesheets = ['https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css']
 external_scripts = ['https://code.jquery.com/jquery-3.5.0.min.js', 'https://cdn.plot.ly/plotly-latest.min.js','https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js']
 
 #server = flask.Flask(__name__) # define flask app.server
