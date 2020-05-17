@@ -1,6 +1,6 @@
 //alert("dedW")
 var spectral_lines = []
-$.getJSON('http://localhost:8050/assets/spectral_lines.json', function(jsondata) {
+$.getJSON('/assets/spectral_lines.json', function(jsondata) {
     line_names = Object.keys(jsondata)
     for(i=0; i<line_names.length; i++){
         spectral_lines.push(jsondata[line_names[i]])
