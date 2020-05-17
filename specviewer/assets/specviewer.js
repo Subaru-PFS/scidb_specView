@@ -44,7 +44,7 @@ function get_data_ranges(data){
     var x_max=1.0
     var y_min=0.0
     var y_max=1.0
-    if(data.traces == null){
+    if(data == null || data.traces == null){
         return {x_range:[x_min,x_max], y_range:[y_min,y_max]}
     }
     trace_names = Object.keys(data.traces)
