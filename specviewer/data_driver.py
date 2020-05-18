@@ -88,7 +88,7 @@ def get_spectrum_list_from_fits(hdulist, name, add_sky=False, add_model=False, a
         c=hdulist[coaddData].data
         spectrum = Spectrum()
         spectrum.name = name
-        spectrum.wavelength = [float(x) for x  in c['lambda']]
+        spectrum.wavelength = [10.0*float(x) for x  in c['lambda']]
         spectrum.flux = [float(x) for x  in c['flux']]
         # adding flux variance
         #flux = c['fluxvariance']
