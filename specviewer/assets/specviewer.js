@@ -220,8 +220,8 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0){
     var layout = {
         showlegend: true,
         dragmode: "pan",
-        //hovermode: "x",
-        hovermode:'closest',
+        hovermode: "x",
+        //hovermode:'closest',
         //hoverlabel: {bgcolor:"white",font_size:100,font_family:"Rockwell",width:500},
         hoverlabel: {bgcolor:"white", bordercolor: "black", align: "left", font:{font_family:"Rockwell", size:20, color:"black"}},
         //hoverdistance: 100,
