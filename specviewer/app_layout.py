@@ -42,12 +42,13 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
             html.Div(id="top-panel-div1", className="col-md-2", style={}, children=[
                 html.H2(["Data Input:"]),
                 html.Br(),
+                html.H5(["Include:"]),
                 dcc.Checklist(
                     id="input-options-checklist",
                     options=[
-                        {'label': 'add model', 'value': 'add_model'},
-                        {'label': 'add sky', 'value': 'add_sky'},
-                        {'label': 'add error', 'value': 'add_error'},
+                        {'label': 'model', 'value': 'add_model'},
+                        {'label': 'sky', 'value': 'add_sky'},
+                        {'label': 'error', 'value': 'add_error'},
                     ],
                     value=[],  # 'add_model'
                     labelStyle={'display': 'inline-block'},
@@ -85,7 +86,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     style={}
                 ),
                 html.Br(),
-                html.Button("Remove trace", id="remove_trace_button"),
+                html.Button("Remove selected", id="remove_trace_button"),
                 html.Br(),
                 html.Br(),
                 html.H3(["Smoothing:"]),
