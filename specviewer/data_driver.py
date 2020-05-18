@@ -105,7 +105,7 @@ def get_spectrum_list_from_fits(hdulist, name, add_sky=False, add_model=False, a
         for ind in range(len(c['MODELFLUX'])):
             spectrum = Spectrum()
             spectrum.name = name + "_" + str(ind)
-            spectrum.wavelength = [float(x) for x in l['WAVELENGTH']]
+            spectrum.wavelength = [10.0*float(x) for x in l['WAVELENGTH']]
             # adding flux
             spectrum.flux = [0.0 for s in range(len(l['WAVELENGTH']))]
             spectrum_list.append(spectrum)
