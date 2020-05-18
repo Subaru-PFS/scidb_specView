@@ -2,3 +2,8 @@
 .upload{
     background-color: 'red'
 }
+
+
+#spec-graph {
+    height: 50vh;
+}
