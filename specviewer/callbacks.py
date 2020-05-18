@@ -148,26 +148,6 @@ def load_callbacks(self): # self is passed as the Viewer class
 
         if self.as_website:
 
-            dd = """
-            @app.callback(
-                Output('spec-graph', 'figure'),
-                [Input('store', 'modified_timestamp')],
-                [State('store', 'data')]
-            )
-            def update_figure(modified_timestamp, data):
-                if data is not None:
-                    #self.write_info("UPDATE FIGURE: Starting updating figure from data")
-                    #data_dict = json.loads(data)
-                    #json_string = json.dumps(data_dict)
-                    figure = self.get_spec_figure_from_data(data)
-                    #f1 = json.dumps(figure)
-                    #self.write_info("UPDATE FIGURE: End updating figure from data")
-                    return figure
-                else:
-                    #self.write_info("UPDATE FIGURE: data is empty")
-                    return no_update
-            """
-
             @app.callback(
                 Output('store', 'data'),
                 [Input("remove_trace_button", "n_clicks"),
@@ -252,7 +232,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                     raise Exception(exs)
                     # return no_update
 
-        if not self.as_website:
+        else:
             # websockets: https://community.plotly.com/t/support-for-websockets/19348/7
             #https://community.plotly.com/t/live-update-by-pushing-from-server-rather-than-polling-or-hitting-reload/23468/2
             #https://community.plotly.com/t/feature-request-for-builtin-support-or-a-component-to-support-callbacks-from-the-server-side/27099
@@ -264,40 +244,6 @@ def load_callbacks(self): # self is passed as the Viewer class
 
             # update main spec figure every time the data changes
 
-            a = """
-
-            @app.callback(
-                Output('spec-graph', 'figure'),
-                [Input('store', 'modified_timestamp')],
-                [State('store', 'data')]
-            )
-            def update_figure(modified_timestamp, data):
-                if data is not None:
-                    self.write_info("UPDATE FIGURE: Starting updating figure from data")
-                    #data_dict = json.loads(data)
-                    #json_string = json.dumps(data_dict)
-                    figure = self.get_spec_figure_from_data(data)
-                    #f1 = json.dumps(figure)
-                    self.write_info("UPDATE FIGURE: End updating figure from data")
-                    return figure
-                else:
-                    self.write_info("UPDATE FIGURE: data is empty")
-                    return no_update
-
-            # update dropdown of traces every time the data changes
-            @app.callback(
-                Output('dropdown-for-traces', 'options'),
-                [Input('store', 'modified_timestamp')],
-                [State('store', 'data')]
-            )
-            def update_dropdown(modified_timestamp, data):
-                self.write_info("UPDATE DROPDOWN: start")
-                data_dict = self.get_data_dict(data)
-                dropdown_options = self.get_dropdown_options(data_dict)
-                self.write_info("UPDATE DROPDOWN: end")
-                return dropdown_options
-
-            """
 
             @app.callback(
                 Output('store', 'data'),
