@@ -6,7 +6,7 @@ from werkzeug.middleware.dispatcher import DispatcherMiddleware
 server = flask.Flask(__name__) # define flask app.server
 
 external_stylesheets = ['https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css']
-external_scripts = ['https://code.jquery.com/jquery-3.5.0.min.js', 'https://cdn.plot.ly/plotly-latest.min.js','https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js']
+external_scripts = ['https://code.jquery.com/jquery-3.5.0.min.js', 'https://cdn.plot.ly/plotly-latest.min.js','https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js','https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML']
 
 #server = flask.Flask(__name__) # define flask app.server
 #app = dash.Dash(__name__, external_stylesheets=external_stylesheets, external_scripts=external_scripts, server=server,  requests_pathname_prefix='/specviewer/')

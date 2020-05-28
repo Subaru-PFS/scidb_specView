@@ -155,6 +155,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                  Input('trace_smooth_button', 'n_clicks'),
                  Input('trace_unsmooth_button', 'n_clicks'),
                  Input('wavelength-unit', 'value'),
+                 Input('flux-unit', 'value'),
                 ],
                 [State('upload-data', 'filename'),
                  State('upload-data', 'last_modified'),
@@ -167,7 +168,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                  ])
             # def process_input(n_intervals, list_of_contents, list_of_names, list_of_dates, data, dropdown_values):
             def process_input(n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button,
-                              n_clicks_unsmooth_button, wavelength_unit,
+                              n_clicks_unsmooth_button, wavelength_unit, flux_unit,
                               list_of_names,list_of_dates, data,data_timestamp,dropdown_trace_names,
                               smoothing_kernel_name,smoothing_kernel_width, input_checklist):
                 try:
@@ -185,7 +186,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                         self.write_info("Start processing uploaded file")
                         data_dict = self.get_data_dict(data)
                         new_data_list = [
-                            self.parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=None, add_sky=add_sky, add_model=add_model, add_error=add_error) for c, n, d in
+                            self.parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=flux_unit, add_sky=add_sky, add_model=add_model, add_error=add_error) for c, n, d in
                             zip(list_of_contents, list_of_names, list_of_dates)]
                         # traces = { name:trace for (name,trace) in new_data  }
                         for traces in new_data_list:
@@ -197,9 +198,9 @@ def load_callbacks(self): # self is passed as the Viewer class
                         #return json.dumps(data_dict)
                         return data_dict
 
-                    elif task_name == 'wavelength-unit':
+                    elif task_name == 'wavelength-unit' or task_name == 'flux-unit':
                         data_dict = self.get_data_dict(data)
-                        self._rescale_axis(data_dict, to_wavelength_unit=wavelength_unit, to_flux_unit=None)
+                        self._rescale_axis(data_dict, to_wavelength_unit=wavelength_unit, to_flux_unit=flux_unit)
                         return data_dict
 
                     elif task_name == "remove_trace_button" and len(dropdown_trace_names) > 0:
@@ -253,6 +254,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                  Input('trace_smooth_button', 'n_clicks'),
                  Input('trace_unsmooth_button', 'n_clicks'),
                  Input('wavelength-unit', 'value'),
+                 Input('flux-unit', 'value'),
                 ],
                 [State('upload-data', 'filename'),
                  State('upload-data', 'last_modified'),
@@ -264,8 +266,10 @@ def load_callbacks(self): # self is passed as the Viewer class
                  State('input-options-checklist', 'value'),
                  ])
             #def process_input(n_intervals, list_of_contents, list_of_names, list_of_dates, data, dropdown_values):
-            def process_input(n_intervals, n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button, n_clicks_unsmooth_button, wavelength_unit, list_of_names,
-                              list_of_dates, data, data_timestamp, dropdown_trace_names,smoothing_kernel_name,smoothing_kernel_width, input_checklist):
+            def process_input(n_intervals, n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button,
+                              n_clicks_unsmooth_button, wavelength_unit, flux_unit, list_of_names,list_of_dates, data,
+                              data_timestamp, dropdown_trace_names,smoothing_kernel_name,smoothing_kernel_width,
+                              input_checklist):
                 try:
                     task_name = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
                     if task_name == "synch_interval":
@@ -284,6 +288,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                             #self.write_info("Interval check: no need to synchronize")
                             return no_update
 
+
                     elif task_name == "upload-data" and list_of_contents is not None:
                         self.write_info("Upload data button: start upload")
                         add_sky = True if "add_sky" in input_checklist else False
@@ -292,7 +297,7 @@ def load_callbacks(self): # self is passed as the Viewer class
 
                         data_dict = self.get_data_dict(data)
                         new_data_list = [
-                            self.parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=None, add_sky=add_sky, add_model=add_model, add_error=add_error) for c, n, d in
+                            self.parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=flux_unit, add_sky=add_sky, add_model=add_model, add_error=add_error) for c, n, d in
                             zip(list_of_contents, list_of_names, list_of_dates)]
                         #traces = { name:trace for (name,trace) in new_data }
                         for traces in new_data_list:
@@ -308,10 +313,10 @@ def load_callbacks(self): # self is passed as the Viewer class
 
                         return data_dict
 
-                    elif task_name == 'wavelength-unit':
+                    elif task_name == 'wavelength-unit' or task_name == 'flux-unit':
                         data_dict = self.get_data_dict(data)
-                        self._rescale_axis(data_dict, to_wavelength_unit=wavelength_unit, to_flux_unit=None, do_update_client=False)
-                        self._rescale_axis(self.app_data, to_wavelength_unit=wavelength_unit, to_flux_unit=None, do_update_client=False)
+                        self._rescale_axis(data_dict, to_wavelength_unit=wavelength_unit, to_flux_unit=flux_unit, do_update_client=False)
+                        self._rescale_axis(self.app_data, to_wavelength_unit=wavelength_unit, to_flux_unit=flux_unit, do_update_client=False)
                         return data_dict
 
                     elif task_name == "remove_trace_button" and len(dropdown_trace_names) > 0:

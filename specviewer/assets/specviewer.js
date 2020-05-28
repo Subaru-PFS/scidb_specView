@@ -8,6 +8,8 @@ $.getJSON('/assets/spectral_lines.json', function(jsondata) {
 })
 
 
+window.PlotlyConfig = {MathJaxConfig: 'local'}
+
 
 window.dash_clientside = Object.assign({}, window.dash_clientside, {
     clientside: {
@@ -72,13 +74,33 @@ function get_flux_unit(data){
 
 function get_x_axis_label(data){
 
-    label = "Wavelength"
+    label = "\\text{Wavelength}"
     unit = get_wavelength_unit(data)
     if(unit != ""){
-        label = label + " (" + unit + ")"
+        label = label + "\\quad [ \\text{" + unit + "} ]"
+    }
+    return "$" + label + "$"
+}
+
+function get_y_axis_label(data){
+    unit = get_flux_unit(data)
+    if(unit != ""){
+        if(unit == "F_lambda"){
+            label = "$\\text{F}_{\\lambda} \\quad [\\text{erg/s/cm}^2/\\text{A}]$"
+        }else if(unit == "F_nu"){
+            label = "$\\text{F}_{\\nu} \\quad [\\text{erg/s/cm}^2/\\text{Hz}]$"
+        }else if(unit == "AB_magnitude"){
+            label = "$\\text{F}_{\\text{AB}} \\quad [\\text{magnitude}]$"
+        }else{
+            label = "Flux"
+        }
+    }else{
+        label = "Flux"
     }
     return label
 }
+
+
 
 function get_wavelength_unit(data){
 
@@ -100,6 +122,25 @@ function get_wavelength_unit(data){
     }
 }
 
+function get_flux_unit(data){
+
+    if(data == null){
+        return ""
+    }
+    trace_names = Object.keys(data.traces)
+    if(trace_names.length == 0){
+        return ""
+    }else{
+        // getting unit from first trace, assumes all traces have same units
+        trace_name = trace_names[0]
+        if(data.traces[trace_name].flux_unit == null){
+            return ""
+        }else{
+            unit = data.traces[trace_name].flux_unit
+            return unit
+        }
+    }
+}
 
 
 
@@ -163,16 +204,15 @@ function build_figure_data(data, spectral_lines_switch, redshift){
                         x: data.traces[trace_name].x_coords,
                         y: data.traces[trace_name].y_coords,
                         mode: "markers+lines",
-                        type: 'scatter',
-                        //type: 'scattergl',
+                        //type: 'scatter',
+                        type: 'scattergl',
                         visible: data.traces[trace_name].visible,
                         color: data.traces[trace_name].color,
                         xaxis: "x",
                         yaxis: "y",
-                        marker:{size: 1.0},
+                        marker:{size: 1.0, color:data.traces[trace_name].color},
                         line:{  color:data.traces[trace_name].color,
-                                wavelength_unit: data.traces[trace_name].wavelength_unit,
-                                flux_unit: data.traces[trace_name].flux_unit, width:1.0
+                                width:1.0
                         }
             }
             traces.push(trace)
@@ -185,8 +225,9 @@ function build_figure_data(data, spectral_lines_switch, redshift){
 function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0){
 
     x_axis_label = get_x_axis_label(data)
-    y_axis_label = get_flux_unit(data)
+    y_axis_label = get_y_axis_label(data)
     wavelength_unit = get_wavelength_unit(data)
+    flux_unit = get_flux_unit(data)
     ranges = get_data_ranges(data)
 
     var annotations = []
@@ -231,13 +272,11 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0){
         //yaxis:{showgrid:false, showline:false, zeroline:false},
         //width: map_width,
         //height: map_height,
-
         //title:{text: "SpecViewer", y: 0.9, x: 0.5, xanchor: 'center', yanchor: 'top'},
         //title: {font: {size: 30}, text: "SpecViewer", y: 0.9, x: 0.5, xanchor: "center", yanchor: "top"},
         font: {family: "Courier New, monospace", size: 18, color: "#7f7f7f"},
-        xaxis: {anchor: "y", title: {text: x_axis_label}, showgrid:false},
-        yaxis: {anchor: "x", title: {text: y_axis_label}, showgrid:false},
-
+        xaxis: {anchor: "y", title: {text: x_axis_label}, showgrid:false, automargin: true,},
+        yaxis: {anchor: "x", title: y_axis_label, showgrid:false, showexponent: 'last', exponentformat: 'power', automargin: true,},
         //xaxis_title:x_axis_label, yaxis_title:y_axis_label,
         font:{family:"Courier New, monospace", size:18, color:"#7f7f7f"},
         plot_bgcolor:'rgb(250,250,250)',

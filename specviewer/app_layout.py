@@ -1,5 +1,5 @@
 from specviewer import refresh_time
-from specviewer.data_models import WavelenghUnit
+from specviewer.data_models import WavelenghUnit, FluxUnit
 import dash_core_components as dcc
 import dash_daq as daq
 import dash_html_components as html
@@ -142,6 +142,21 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             multi=False,
                             style={}, clearable=False
                         ),
+                        html.Br(),
+                        html.Br(),
+                        html.H3(["Flux unit"]),
+                        dcc.Dropdown(
+                            id='flux-unit',
+                            options=[
+                                        {'label': "erg/s/cm^2/A", 'value': FluxUnit.F_lambda},
+                                        {'label': "erg/s/cm^2/Hz", 'value': FluxUnit.F_nu},
+                                        {'label': "AB Magnitude", 'value': FluxUnit.AB_magnitude}
+                                    ],
+                            value=FluxUnit.F_lambda,
+                            placeholder="Flux unit",
+                            multi=False,
+                            style={}, clearable=False
+                        ),
                     ]),
                     html.Div(className="col-md-2", children=[
                         #https://dash.plotly.com/dash-daq/booleanswitch
@@ -163,7 +178,10 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             marks={ i: i for i in range(0,10+1)},
                             handleLabel={"showCurrentValue": True, "label": "Redshift"},
                             step=0.001
-                        )
+                        ),
+                        html.Br(),
+                        html.Br(),
+                        html.Div(dcc.Input(id='redshift_input', value='0', type='number')),
                     ]),
                     html.Div(className="col-md-6", children=[
                     ]),

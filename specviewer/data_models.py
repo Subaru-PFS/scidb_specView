@@ -7,6 +7,11 @@ class WavelenghUnit:
     ANGSTROM = "angstrom"
     NANOMETER = "nanometer"
 
+class FluxUnit:
+    F_nu = "F_nu"
+    F_lambda = "F_lambda"
+    AB_magnitude = "AB_magnitude"
+
 
 class Trace:
     def __init__(self,name=None, x_coords=None, y_coords=None, color="black", linewidth=1, alpha=1):
@@ -24,13 +29,16 @@ class Trace:
         return str(self.to_dict())
 
 class Spectrum:
-    def __init__(self,name=None, wavelength=None, flux=None, sky=None, model=None, and_mask=None, or_mask=None):
+    def __init__(self,name=None, wavelength=None, flux=None, sky=None, model=None, and_mask=None, or_mask=None, wavelength_unit=None, flux_unit=None, flambda=None):
         self.name = name
         self.wavelength = wavelength
         self.sky = sky
         self.model=model
         self.and_mask=and_mask
         self.or_mask=or_mask
+        self.wavelength_unit = wavelength_unit
+        self.flux_unit = flux_unit
+        self.flambda = flambda
 
     def to_dict(self):
         return vars(self)

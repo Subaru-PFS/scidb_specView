@@ -43,8 +43,9 @@ import traceback
 import dash_table
 from pathlib import Path
 from astropy.convolution import convolve, Gaussian1DKernel, Box1DKernel
-from specviewer.data_models import WavelenghUnit
+from specviewer.data_models import WavelenghUnit, FluxUnit
 from specviewer.colors import get_next_color
+from specviewer.flux import fnu_to_abmag,fnu_to_flambda,flambda_to_fnu,flambda_to_abmag,abmag_to_fnu,abmag_to_flambda
 
 process_manager = multiprocessing.Manager()
 jupyter_viewer = AppViewer()
@@ -106,7 +107,7 @@ class Viewer():
 
 
 
-    def parse_uploaded_file(self, contents, file_name, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=None, add_sky=False, add_model=False, add_error=False):
+    def parse_uploaded_file(self, contents, file_name, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=FluxUnit.F_lambda, add_sky=False, add_model=False, add_error=False):
 
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
@@ -124,7 +125,7 @@ class Viewer():
         #trace = self.build_trace(x_coords=[1, 2, 3, 4], y_coords=[float(np.random.random_sample()) for i in range(4)],name=filename, wavelength_unit=wavelength_unit)
         rescaled_traces = []
         for spectrum in spectrum_list:
-            trace = self.build_trace(spectrum.wavelength, spectrum.flux, spectrum.name, color="black", linewidth=1, alpha=0.8, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=None)
+            trace = self.build_trace(spectrum.wavelength, spectrum.flux, spectrum.name, color="black", linewidth=1, alpha=0.8, wavelength_unit=spectrum.wavelength_unit, flux_unit=spectrum.flux_unit, flambda=spectrum.flambda)
             rescaled_traces.append(self.get_rescaled_axis_in_trace(trace, to_wavelength_unit=wavelength_unit, to_flux_unit=flux_unit))
         return rescaled_traces
 
@@ -254,7 +255,6 @@ class Viewer():
         print("Adding trace")
         return self.add_trace_to_data(self.app_data, name, trace, do_update_client = True)
 
-
     def _remove_traces(self, trace_names, data, do_update_client=True):
         traces = data['traces']
         for trace_name in trace_names:
@@ -263,7 +263,6 @@ class Viewer():
         if do_update_client:
             self.update_client()
 
-
     def remove_trace(self, name):
         traces = self.app_data['traces']
         traces.pop(name)
@@ -271,11 +270,12 @@ class Viewer():
         self.update_client()
 
     def build_trace(self, x_coords=[], y_coords=[], name=None, parent=None, type=None, color="black", linewidth=1,
-                    alpha=1.0, x_coords_original=None, y_coords_original=None, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=None):
+                    alpha=1.0, x_coords_original=None, y_coords_original=None, wavelength_unit=WavelenghUnit.ANGSTROM,
+                    flux_unit=FluxUnit.F_lambda, flambda=None):
         return {'name': name, 'x_coords': x_coords, 'y_coords': y_coords, 'type': type, 'parent': parent,
                 'visible': True, 'color': color, 'linewidth': linewidth, 'alpha': alpha,
                 'x_coords_original': x_coords_original, 'y_coords_original': y_coords_original,
-                'wavelength_unit':wavelength_unit, "flux_unit":flux_unit}
+                'wavelength_unit':wavelength_unit, "flux_unit":flux_unit, "flambda":flambda}
 
     def build_new_app_data(self, spec_traces=[], spec_layout=[], spec_selection = {}):
         return {'spec_figure': {'data':spec_traces, 'laylout':spec_layout }, 'spec_selection':spec_selection}
@@ -395,14 +395,14 @@ class Viewer():
             self.update_client()
 
 
-    def _rescale_axis(self, application_data, to_wavelength_unit=WavelenghUnit.ANGSTROM, to_flux_unit=None, do_update_client=False):
+    def _rescale_axis(self, application_data, to_wavelength_unit=WavelenghUnit.ANGSTROM, to_flux_unit=FluxUnit.F_lambda, do_update_client=False):
         for trace_name in application_data['traces']:
-           rescaled_trace = self.get_rescaled_axis_in_trace(application_data['traces'][trace_name], to_wavelength_unit, to_flux_unit)
+           rescaled_trace = self.get_rescaled_axis_in_trace(application_data['traces'][trace_name], to_wavelength_unit=to_wavelength_unit, to_flux_unit=to_flux_unit)
            application_data['traces'][trace_name] = rescaled_trace
         if do_update_client:
             self.update_client()
 
-    def get_rescaled_axis_in_trace(self, trace, to_wavelength_unit=WavelenghUnit.ANGSTROM, to_flux_unit=None):
+    def get_rescaled_axis_in_trace(self, trace, to_wavelength_unit=WavelenghUnit.ANGSTROM, to_flux_unit=FluxUnit.F_lambda):
         # for wavelength axis:
         if trace.get('wavelength_unit') != to_wavelength_unit and to_wavelength_unit is not None:
             if trace.get('wavelength_unit') == WavelenghUnit.ANGSTROM and to_wavelength_unit == WavelenghUnit.NANOMETER:
@@ -410,8 +410,33 @@ class Viewer():
             elif trace.get('wavelength_unit') == WavelenghUnit.NANOMETER and to_wavelength_unit == WavelenghUnit.ANGSTROM:
                 trace['x_coords'] = [x*10.0 for x in trace['x_coords']]
             else:
-                raise Exception("Unsupported unit " + str(to_wavelength_unit) + " . Parameter to_units takes values from class WavelenghUnit.")
+                raise Exception("Unsupported unit " + str(to_wavelength_unit) + " . Parameter to_wavelength_unit takes values from class WavelenghUnit.")
         trace['wavelength_unit'] = to_wavelength_unit
+
+        #https://en.wikipedia.org/wiki/AB_magnitude
+        if trace.get('flux_unit') != to_flux_unit and to_flux_unit is not None:
+            if trace.get('flux_unit') == FluxUnit.F_lambda and to_flux_unit == FluxUnit.F_nu:
+                trace['y_coords'] = [ flambda_to_fnu(flam,trace['x_coords'][i], to_wavelength_unit) for (i,flam) in enumerate(trace['y_coords'])]
+            elif trace.get('flux_unit') == FluxUnit.F_lambda and to_flux_unit == FluxUnit.AB_magnitude:
+                trace['y_coords'] = [ flambda_to_abmag(flam,trace['x_coords'][i], to_wavelength_unit) for (i,flam) in enumerate(trace['y_coords'])]
+            elif trace.get('flux_unit') == FluxUnit.F_nu and to_flux_unit == FluxUnit.F_lambda:
+                trace['y_coords'] = [ fnu_to_flambda(fnu,trace['x_coords'][i], to_wavelength_unit) for (i,fnu) in enumerate(trace['y_coords'])]
+            elif trace.get('flux_unit') == FluxUnit.F_nu and to_flux_unit == FluxUnit.AB_magnitude:
+                trace['y_coords'] = [ fnu_to_abmag(fnu) for fnu in trace['y_coords']]
+            elif trace.get('flux_unit') == FluxUnit.AB_magnitude and to_flux_unit == FluxUnit.F_lambda:
+                if trace.get("flambda") is not None:
+                    trace['y_coords'] = [f for f in trace['flambda']]
+                else:
+                    trace['y_coords'] = [ abmag_to_flambda(abmag,trace['x_coords'][i], to_wavelength_unit) for (i,abmag) in enumerate(trace['y_coords'])]
+            elif trace.get('flux_unit') == FluxUnit.AB_magnitude and to_flux_unit == FluxUnit.F_nu:
+                if trace.get("flambda") is not None:
+                    trace['y_coords'] = [ flambda_to_fnu(flam,trace['x_coords'][i], to_wavelength_unit) for (i,flam) in enumerate(trace['flambda'])]
+                else:
+                    trace['y_coords'] = [ abmag_to_fnu(abmag) for abmag in trace['y_coords']]
+            else:
+                raise Exception("Unsupported unit " + str(to_flux_unit) + " . Parameter to_flux_unit takes values from class FluxUnit.")
+
+        trace['flux_unit'] = to_flux_unit
         return trace
 
 
