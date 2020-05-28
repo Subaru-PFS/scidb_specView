@@ -238,10 +238,19 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0){
             line = spectral_lines[i]
             x0 = (1.0+redshift)*line.lambda_vacuum
             line_label = line.name
+            line_label = line.label
             if(wavelength_unit == "nanometer")
                 x0 = x0/10.0
             x1=x0
             if(x0 >= ranges.x_range[0] && x0 <= ranges.x_range[1]){
+
+                if(i % 3 == 0){
+                    y_line_annotation = 1.0
+                }else if(i % 3 == 1){
+                    y_line_annotation = 1.02
+                }else{
+                    y_line_annotation = 1.04
+                }
 
                 y0 = ranges.y_range[0] + 0.1*(ranges.y_range[1]-ranges.y_range[0])
                 y1 = ranges.y_range[1] - 0.1*(ranges.y_range[1]-ranges.y_range[0])
@@ -251,7 +260,7 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0){
                 line = {type: 'line', name:line_label,  layer:'above', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:0.5, color:"grey"}, opacity:0.5 }
                 shapes.push(line)
 
-                annotation = {showarrow: false, text: line_label, align: "center",x: x0, xanchor: "center", y: 1.0, yanchor: "bottom", yref:"paper", font:{size:10, family:"Arial",color:"grey"}, opacity:1}
+                annotation = {showarrow: false, text: line_label, align: "center",x: x0, xanchor: "center", y: y_line_annotation, yanchor: "bottom", yref:"paper", font:{size:10, family:"Arial",color:"grey"}, opacity:1}
                 annotations.push(annotation)
             }
         }
