@@ -291,7 +291,8 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0){
         plot_bgcolor:'rgb(250,250,250)',
         clickmode:'event+select',
         shapes: shapes,
-        annotations: annotations
+        annotations: annotations,
+        uirevision: "fwef",
     }
     return layout
 }
