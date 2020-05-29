@@ -177,18 +177,15 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             value=0,
                             marks={ i: i for i in range(0,10+1)},
                             handleLabel={"showCurrentValue": True, "label": "Redshift"},
-                            step=0.001
+                            step=0.01
                         ),
                         html.Br(),
                         html.Br(),
                         html.Div(dcc.Input(id='redshift_input', value='0', type='number')),
+                        html.Button("Set", id="redshift_button"),
                     ]),
                     html.Div(className="col-md-6", children=[
                     ]),
-
-
-
-
                 ]),
 
 

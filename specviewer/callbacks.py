@@ -119,6 +119,27 @@ def load_callbacks(self): # self is passed as the Viewer class
     """
 
 
+        @app.callback(
+            Output('redshift_input', 'value'),
+            [Input("redshift-slider", "value"),]
+        )
+        def process_redshift_slider(redshift):
+            if redshift != None:
+                return float(redshift)
+            else:
+                return no_update
+
+        @app.callback(
+            Output('redshift-slider', 'value'),
+            [Input("redshift_button", "n_clicks"),],
+            [State("redshift_input","value")]
+        )
+        def process_redshidt_input(n_clicks, redshift_input):
+            if redshift_input != None:
+                return float(redshift_input)
+            else:
+                return no_update
+
         # update main spec figure every time the data changes
         # @app.callback(
         app.clientside_callback(
