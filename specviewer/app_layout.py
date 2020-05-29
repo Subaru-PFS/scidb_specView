@@ -106,7 +106,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     ]),
                     html.Div(className="col-md-6", children=[
                         html.Span(["Width:"]),
-                        html.Div(dcc.Input(id='kernel_width_box', value='20', type='number')),
+                        html.Div(dcc.Input(id='kernel_width_box', value='5', type='number')),
                     ]),
                 ]),
                 html.Br(),
