@@ -4,6 +4,13 @@ import dash_core_components as dcc
 import dash_daq as daq
 import dash_html_components as html
 from textwrap import dedent as d
+from specviewer.spectral_lines import spectral_lines
+import json
+
+
+spectral_line_dropdown_options = []
+spectral_line_dropdown_options.append({'label':'all', 'value':'all'})
+spectral_line_dropdown_options = spectral_line_dropdown_options + [ {'label':spectral_lines[line]['fullname'], 'value':spectral_lines[line]['fullname']} for line in spectral_lines]
 
 styles = {
     'pre': {
@@ -160,13 +167,30 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     ]),
                     html.Div(className="col-md-2", children=[
                         #https://dash.plotly.com/dash-daq/booleanswitch
+                        html.H3("SpectralLines:"),
                         daq.BooleanSwitch(id="spectral-lines-switch",
                             on=False,
-                            label="Spectral Lines",
+                            label="Show lines",
                             labelPosition="top",
                             persistence=True,
                             persistence_type="session",
                         ),
+                        html.Br(),
+                        html.Br(),
+                        dcc.Dropdown(
+                            id='spectral_lines_dropdown',
+                            options=spectral_line_dropdown_options,
+                            value="all",
+                            placeholder="Choose spectral line(s)",
+                            multi=True,
+                            style={}, clearable=True
+                        ),
+                        html.Div(dcc.Input(id='spectral_lines_dict', value=json.dumps(spectral_lines), style={'display': 'none'})),
+                        html.Br(),
+                        html.Br(),
+                        html.H4("Line(s) redshift:"),
+                        html.Div(dcc.Input(id='redshift_input', value='0', type='number')),
+                        html.Button("Set", id="redshift_button"),
                         html.Br(),
                         html.Br(),
                         html.Br(),
@@ -179,10 +203,6 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             handleLabel={"showCurrentValue": True, "label": "Redshift"},
                             step=0.01
                         ),
-                        html.Br(),
-                        html.Br(),
-                        html.Div(dcc.Input(id='redshift_input', value='0', type='number')),
-                        html.Button("Set", id="redshift_button"),
                     ]),
                     html.Div(className="col-md-6", children=[
                     ]),

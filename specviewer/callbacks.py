@@ -149,9 +149,10 @@ def load_callbacks(self): # self is passed as the Viewer class
             ),
             Output('spec-graph', 'figure'),
             # [Input('store', 'data')],
-            [Input('store', 'modified_timestamp'), Input('spectral-lines-switch', 'on'),Input('redshift-slider', 'value'),],
-
-            [State('store', 'data')]
+            [Input('store', 'modified_timestamp'), Input('spectral-lines-switch', 'on'),
+             Input('redshift-slider', 'value'),Input('spectral_lines_dropdown', 'value')
+            ],
+            [State('store', 'data'),State('spectral_lines_dict','value')]
         )
 
         # update dropdown of traces every time the data changes
