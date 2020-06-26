@@ -134,7 +134,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                 html.Br(),
                 daq.BooleanSwitch(id="and_mask_switch",
                                   on=False,
-                                  label="Show and mask",
+                                  label="Show mask(s)",
                                   labelPosition="top",
                                   persistence=True,
                                   persistence_type="session",

@@ -316,7 +316,7 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
         // plot masks for each trace:
         for(h =0;h<trace_dropdown.length;h++){
             trace_name = trace_dropdown[h]
-            if(data['traces'][trace_name]['masks'] != null){
+            if(data['traces'][trace_name] != null && data['traces'][trace_name]['masks'] != null){
 
                 trace_catalog = data['traces'][trace_name]['catalog']
                 if(data['traces'][trace_name]['masks']['and_mask'] != null){
@@ -402,7 +402,7 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
         clickmode:'event+select',
         shapes: shapes,
         annotations: annotations,
-        uirevision: "fwef",
+        //uirevision: "fwef",
     }
     return layout
 }
