@@ -24,10 +24,59 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
             return options
         },
 
-        set_figure: function(modified_timestamp, spectral_lines_switch, redshift, spectral_lines_dropdown, data, spectral_lines_dict) {
+        set_masks_dropdown: function(trace_dropdown_options, data){
+
+            mask_dropdown_options = []
+
+            catalogs_list = []
+            options_ids = {}
+            if(trace_dropdown_options.length > 0){
+                for( trace_name in data['traces']){
+                    for(trace_option in trace_dropdown_options){
+                        if(trace_name == trace_dropdown_options[trace_option].value){
+
+                            //adding "all" entry:
+                            catalog = data['traces'][trace_name].catalog
+                            label_all = catalog + " all masks"
+                            options_for_all_entry = []
+                            options_ids = {}
+                            for(mask_bit in data['traces'][trace_name]['mask_bits']){
+                                label_value = mask_bit
+                                bit = data['traces'][trace_name]['mask_bits'][mask_bit].bit
+                                catalog = data['traces'][trace_name]['mask_bits'][mask_bit].catalog
+                                options_for_all_entry.push({label:label_value, value:{id:label_value, trace:trace_name, bit:bit, catalog:catalog, is_all:false}})
+                            }
+                            if(options_ids[label_all] == null){
+                                val = JSON.stringify({id:label_all, trace:trace_name, bit:null, catalog:catalog, is_all:true, options_for_all_entry:options_for_all_entry})
+                                mask_option = {label:label_all, value:val}
+                                mask_dropdown_options.push(mask_option)
+                                options_ids[label_all] = mask_option
+                            }
+
+                            //adding single mask entries
+                            for(mask_bit in data['traces'][trace_name]['mask_bits']){
+                                label_value = mask_bit
+                                bit = data['traces'][trace_name]['mask_bits'][mask_bit].bit
+                                catalog = data['traces'][trace_name]['mask_bits'][mask_bit].catalog
+
+                                if(options_ids[label_value] == null){
+                                    mask_option = {label:label_value, value:JSON.stringify({id:mask_bit, trace:trace_name, bit:bit, catalog:catalog, is_all:false})}
+                                    mask_dropdown_options.push(mask_option)
+                                    options_ids[label_value] = mask_option
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+            return mask_dropdown_options
+        },
+
+        set_figure: function(modified_timestamp, spectral_lines_switch, redshift, spectral_lines_dropdown, and_mask_switch, mask_dropdown, data, spectral_lines_dict, trace_dropdown) {
             figure_data = build_figure_data(data, spectral_lines_switch, redshift, spectral_lines_dropdown, spectral_lines_dict)
             //x_range = get_x_range(data)
-            figure_layout = build_figure_layout(data, spectral_lines_switch=spectral_lines_switch, redshift, spectral_lines_dropdown, spectral_lines_dict)
+            figure_layout = build_figure_layout(data, spectral_lines_switch=spectral_lines_switch, redshift, spectral_lines_dropdown, spectral_lines_dict, and_mask_switch, mask_dropdown, trace_dropdown)
             //console.log(JSON.stringify(figure_layout.xaxis))
             return {data:figure_data, layout:figure_layout}
         }
@@ -174,7 +223,7 @@ function build_figure_data(data, spectral_lines_switch, redshift, spectral_lines
 }
 
 
-function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, spectral_lines_dropdown = [], spectral_lines_dict = []){
+function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, spectral_lines_dropdown = [], spectral_lines_dict = [], and_mask_switch=false, mask_dropdown = [], trace_dropdown = []){
 
     if(spectral_lines == null){
         spectral_lines = JSON.parse(spectral_lines_dict)
@@ -188,6 +237,8 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
 
     var annotations = []
     var shapes = [] // https://plotly.com/python/reference/#layout-shapes
+
+    // adding spectral lines
     if(spectral_lines_switch == true){
 
         spec_lines = []
@@ -238,6 +289,91 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
                 annotations.push(annotation)
             }
         }
+    }
+
+    // adding masks
+
+    if(and_mask_switch == true){
+        //var selected_masks = []
+        var selected_masks = {}
+        for(i=0;i<mask_dropdown.length;i++){
+            mask = JSON.parse(mask_dropdown[i])
+            //selected_masks.push({'id':mask.id, 'catalog':mask.catalog,'bit':parseInt(mask.bit)})
+
+            if(mask.is_all == true){
+                options_for_all_entry = mask.options_for_all_entry
+                for(j=0;j<options_for_all_entry.length;j++){
+                    option_for_all_entry = options_for_all_entry[j]
+                    selected_masks[option_for_all_entry.label] = option_for_all_entry
+                }
+            }else{
+                if(selected_masks[mask.id] == null){
+                    selected_masks[mask.id] = {label:mask.id, value:{id:mask.id, trace:mask.trace, catalog:mask.catalog,bit:parseInt(mask.bit)}}
+                }
+            }
+        }
+
+        // plot masks for each trace:
+        for(h =0;h<trace_dropdown.length;h++){
+            trace_name = trace_dropdown[h]
+            if(data['traces'][trace_name]['masks'] != null){
+
+                trace_catalog = data['traces'][trace_name]['catalog']
+                if(data['traces'][trace_name]['masks']['and_mask'] != null){
+                    and_mask = data['traces'][trace_name]['masks']['and_mask']
+
+
+                    wavelength_array = data['traces'][trace_name]['x_coords']
+
+                    selected_bit_list = []
+                    selected_masks_in_trace = []
+                    for(mask in selected_masks){
+                        if(selected_masks[mask].value.catalog == trace_catalog){
+                            selected_masks_in_trace.push(selected_masks[mask].value)
+                        }
+                    }
+
+                    if(selected_masks_in_trace.length > 0){
+
+                        for(mask_bit in and_mask){
+                            mask_bit2 = parseInt(mask_bit)
+
+                            bits_in_this_region = []
+                            rect_label = ""
+                            for(k=0;k<selected_masks_in_trace.length;k++){
+                                selected_bit = parseInt(selected_masks_in_trace[k].bit)
+                                if( (mask_bit2 & 2**selected_bit) != 0){
+                                    bits_in_this_region.push(selected_bit)
+                                    rect_label = rect_label + " " + String(selected_masks_in_trace[k].id)
+                                }
+                            }
+                            if(bits_in_this_region.length > 0){
+                                // add masked region
+                                wavelength_indices = and_mask[mask_bit]
+                                for(j=0;j<wavelength_indices.length;j++){
+                                    indices = wavelength_indices[j]
+                                    x0 = wavelength_array[indices[0]]
+                                    x1 = wavelength_array[indices[1]]
+                                    y0 = 0.0
+                                    y1 = 1.0
+                                    if(x0 >= ranges.x_range[0] && x0 <= ranges.x_range[1]){
+                                        rectangle =  {type: 'rect', name:rect_label,  layer:'below', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:0.5, color:"lightgrey"}, opacity:0.5, fillcolor:"lightgrey"}
+                                        shapes.push(rectangle)
+                                        annotation = {showarrow: false, text: rect_label, align: "right", x: (x0+x1)/2.0, xref:'x', xanchor: "center", y: y0, yanchor: "bottom", yref:"paper", font:{size:10, family:"Arial",color:"grey"}, opacity:1}
+                                        annotations.push(annotation)
+                                    }
+                                }
+
+                            }
+                        }
+                    }
+
+
+
+                }
+            }
+        }
+
     }
 
 

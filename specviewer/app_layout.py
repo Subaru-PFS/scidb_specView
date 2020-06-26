@@ -120,10 +120,31 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                 html.Button('Smooth', id='trace_smooth_button'),
                 html.Button('Unsmooth', id='trace_unsmooth_button'),
 
+                html.Br(),
+                html.Br(),
+                html.H3(["Masks:"]),
+                dcc.Dropdown(
+                    id='dropdown-for-masks',
+                    options=[],  # [{'label': label, 'value': label} for label in labels],
+                    value='',
+                    placeholder="Select masks(s)",
+                    multi=True,
+                    style={}
+                ),
+                html.Br(),
+                daq.BooleanSwitch(id="and_mask_switch",
+                                  on=False,
+                                  label="Show and mask",
+                                  labelPosition="top",
+                                  persistence=True,
+                                  persistence_type="session",
+                ),
+
                 html.Div(dcc.Input(style={'display':'none'}, id='input-box', type='text')),
                 html.Button('Submit', id='button', style={'display':'none'}),
                 html.Div(id='output-container-button', style={'display':'none'},
                          children='Enter a value and press submit'),
+
 
             ]),
             ## next column --------------------------------------------------------------------------------------------

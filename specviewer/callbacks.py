@@ -150,9 +150,14 @@ def load_callbacks(self): # self is passed as the Viewer class
             Output('spec-graph', 'figure'),
             # [Input('store', 'data')],
             [Input('store', 'modified_timestamp'), Input('spectral-lines-switch', 'on'),
-             Input('redshift-slider', 'value'),Input('spectral_lines_dropdown', 'value')
+             Input('redshift-slider', 'value'),Input('spectral_lines_dropdown', 'value'),
+             Input('and_mask_switch', 'on'),
+             Input('dropdown-for-masks', 'value'),
             ],
-            [State('store', 'data'),State('spectral_lines_dict','value')]
+            [State('store', 'data'),
+             State('spectral_lines_dict','value'),
+             State('dropdown-for-traces', 'value'),
+            ]
         )
 
         # update dropdown of traces every time the data changes
@@ -167,6 +172,20 @@ def load_callbacks(self): # self is passed as the Viewer class
             [Input('store', 'modified_timestamp')],
             [State('store', 'data')]
         )
+
+
+        app.clientside_callback(
+            ClientsideFunction(
+                namespace='clientside',
+                function_name='set_masks_dropdown'
+            ),
+            Output('dropdown-for-masks', 'options'),
+            # [Input('store', 'data')]
+            # [Input('store', 'data')],
+            [Input('dropdown-for-traces', 'options')],
+            [State('store', 'data')]
+        )
+
 
         if self.as_website:
 

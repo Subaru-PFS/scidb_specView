@@ -29,16 +29,18 @@ class Trace:
         return str(self.to_dict())
 
 class Spectrum:
-    def __init__(self,name=None, wavelength=None, flux=None, sky=None, model=None, and_mask=None, or_mask=None, wavelength_unit=None, flux_unit=None, flambda=None):
+    def __init__(self,name=None, wavelength=None, flux=None, sky=None, model=None, masks=None, mask_bits=None, wavelength_unit=None, flux_unit=None, flambda=None, catalog=None):
         self.name = name
         self.wavelength = wavelength
         self.sky = sky
         self.model=model
-        self.and_mask=and_mask
-        self.or_mask=or_mask
+        self.masks = masks
+        self.mask_bits = mask_bits
         self.wavelength_unit = wavelength_unit
         self.flux_unit = flux_unit
         self.flambda = flambda
+        self.catalog = catalog
+
 
     def to_dict(self):
         return vars(self)

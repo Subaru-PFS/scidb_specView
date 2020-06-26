@@ -103,11 +103,7 @@ class Viewer():
     def get_new_trace_color(self,application_data):
         traces = application_data['traces']
 
-
-
-
-
-    def parse_uploaded_file(self, contents, file_name, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=FluxUnit.F_lambda, add_sky=False, add_model=False, add_error=False):
+    def parse_uploaded_file(self, contents, file_name, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=FluxUnit.F_lambda, add_sky=False, add_model=False, add_error=False, add_masks=True):
 
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
@@ -118,15 +114,18 @@ class Viewer():
             file_name = ".".join(file_name_parts[:(len(file_name_parts)-1)])
 
         # assumes that spectrum wavelength units are in Armstrong:
-        spectrum_list = data_driver.get_spectrum_list_from_fits(hdulist, file_name, add_sky=add_sky, add_model=add_model, add_error=add_error)
+        spectrum_list = data_driver.get_spectrum_list_from_fits(hdulist, file_name, add_sky=add_sky, add_model=add_model, add_error=add_error, add_masks=add_masks)
 
         # name = filename + str(len(hdulist))
         # trace = self.build_trace(x_coords=[1,2,3,4], [float(np.random.random_sample()) for i in range(4)], filename)
         #trace = self.build_trace(x_coords=[1, 2, 3, 4], y_coords=[float(np.random.random_sample()) for i in range(4)],name=filename, wavelength_unit=wavelength_unit)
         rescaled_traces = []
         for spectrum in spectrum_list:
-            trace = self.build_trace(spectrum.wavelength, spectrum.flux, spectrum.name, color="black", linewidth=1, alpha=0.8, wavelength_unit=spectrum.wavelength_unit, flux_unit=spectrum.flux_unit, flambda=spectrum.flambda)
-            rescaled_traces.append(self.get_rescaled_axis_in_trace(trace, to_wavelength_unit=wavelength_unit, to_flux_unit=flux_unit))
+            trace = self.build_trace(spectrum.wavelength, spectrum.flux, spectrum.name, color="black", linewidth=1,
+                                     alpha=0.8, wavelength_unit=spectrum.wavelength_unit, flux_unit=spectrum.flux_unit,
+                                     flambda=spectrum.flambda, masks=spectrum.masks, mask_bits=spectrum.mask_bits, catalog=spectrum.catalog)
+            rescaled_traces.append(self.get_rescaled_axis_in_trace(trace, to_wavelength_unit=wavelength_unit,
+                                                                   to_flux_unit=flux_unit))
         return rescaled_traces
 
 
@@ -271,11 +270,12 @@ class Viewer():
 
     def build_trace(self, x_coords=[], y_coords=[], name=None, parent=None, type=None, color="black", linewidth=1,
                     alpha=1.0, x_coords_original=None, y_coords_original=None, wavelength_unit=WavelenghUnit.ANGSTROM,
-                    flux_unit=FluxUnit.F_lambda, flambda=None):
+                    flux_unit=FluxUnit.F_lambda, flambda=None, masks=None, mask_bits=None, catalog=None):
         return {'name': name, 'x_coords': x_coords, 'y_coords': y_coords, 'type': type, 'parent': parent,
                 'visible': True, 'color': color, 'linewidth': linewidth, 'alpha': alpha,
                 'x_coords_original': x_coords_original, 'y_coords_original': y_coords_original,
-                'wavelength_unit':wavelength_unit, "flux_unit":flux_unit, "flambda":flambda}
+                'wavelength_unit':wavelength_unit, "flux_unit":flux_unit, "flambda":flambda, 'masks':masks,
+                'mask_bits':mask_bits, "catalog":catalog}
 
     def build_new_app_data(self, spec_traces=[], spec_layout=[], spec_selection = {}):
         return {'spec_figure': {'data':spec_traces, 'laylout':spec_layout }, 'spec_selection':spec_selection}
