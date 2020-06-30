@@ -90,7 +90,9 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     value='',
                     placeholder="Select trace(s)",
                     multi=True,
-                    style={}
+                    style={},
+                    persistence=True,
+                    persistence_type="session"
                 ),
                 html.Br(),
                 html.Button("Remove selected", id="remove_trace_button"),
@@ -108,7 +110,9 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             placeholder="Select Smoothing kernel",
                             multi=False,
                             style={},
-                            clearable = False
+                            clearable = False,
+                            persistence=True,
+                            persistence_type="session"
                         )
                     ]),
                     html.Div(className="col-md-6", children=[
@@ -129,7 +133,9 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     value='',
                     placeholder="Select masks(s)",
                     multi=True,
-                    style={}
+                    style={},
+                    persistence=True,
+                    persistence_type="session"
                 ),
                 html.Br(),
                 daq.BooleanSwitch(id="and_mask_switch",
