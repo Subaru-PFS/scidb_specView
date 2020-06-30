@@ -44,7 +44,8 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                                 label_value = mask_bit
                                 bit = data['traces'][trace_name]['mask_bits'][mask_bit].bit
                                 catalog = data['traces'][trace_name]['mask_bits'][mask_bit].catalog
-                                options_for_all_entry.push({label:label_value, value:{id:label_value, trace:trace_name, bit:bit, catalog:catalog, is_all:false}})
+                                name = data['traces'][trace_name]['mask_bits'][mask_bit].name
+                                options_for_all_entry.push({label:label_value, value:{id:label_value, trace:trace_name, bit:bit, catalog:catalog, name:name, is_all:false}})
                             }
                             if(options_ids[label_all] == null){
                                 val = JSON.stringify({id:label_all, trace:trace_name, bit:null, catalog:catalog, is_all:true, options_for_all_entry:options_for_all_entry})
@@ -58,9 +59,10 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                                 label_value = mask_bit
                                 bit = data['traces'][trace_name]['mask_bits'][mask_bit].bit
                                 catalog = data['traces'][trace_name]['mask_bits'][mask_bit].catalog
+                                name = data['traces'][trace_name]['mask_bits'][mask_bit].name
 
                                 if(options_ids[label_value] == null){
-                                    mask_option = {label:label_value, value:JSON.stringify({id:mask_bit, trace:trace_name, bit:bit, catalog:catalog, is_all:false})}
+                                    mask_option = {label:label_value, value:JSON.stringify({id:mask_bit, trace:trace_name, bit:bit, catalog:catalog, name:name, is_all:false})}
                                     mask_dropdown_options.push(mask_option)
                                     options_ids[label_value] = mask_option
                                 }
@@ -344,7 +346,14 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
                                 selected_bit = parseInt(selected_masks_in_trace[k].bit)
                                 if( (mask_bit2 & 2**selected_bit) != 0){
                                     bits_in_this_region.push(selected_bit)
-                                    rect_label = rect_label + " " + String(selected_masks_in_trace[k].id)
+                                    //rect_label = rect_label + " " + String(selected_masks_in_trace[k].id)
+                                    short_trace_name = String(selected_masks_in_trace[k].trace)
+                                    max_name_length = 10
+                                    halfname_length = 5
+                                    if(short_trace_name.length > max_name_length){
+                                        short_trace_name = short_trace_name.substring(0,halfname_length) + "..." + short_trace_name.substring(short_trace_name.length-halfname_length,short_trace_name.length)
+                                    }
+                                    rect_label = rect_label + short_trace_name + "<br>" + String(selected_masks_in_trace[k].name) + "<br>"
                                 }
                             }
                             if(bits_in_this_region.length > 0){
@@ -357,9 +366,9 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
                                     y0 = 0.0
                                     y1 = 1.0
                                     if(x0 >= ranges.x_range[0] && x0 <= ranges.x_range[1]){
-                                        rectangle =  {type: 'rect', name:rect_label,  layer:'below', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:0.5, color:"lightgrey"}, opacity:0.5, fillcolor:"lightgrey"}
+                                        rectangle =  {type: 'rect', name:rect_label,  layer:'below', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:0.5, color:"lightgrey"}, opacity:0.15, fillcolor:"rgb(211,211,211)"}
                                         shapes.push(rectangle)
-                                        annotation = {showarrow: false, text: rect_label, align: "right", x: (x0+x1)/2.0, xref:'x', xanchor: "center", y: y0, yanchor: "bottom", yref:"paper", font:{size:10, family:"Arial",color:"grey"}, opacity:1}
+                                        annotation = {showarrow: false, text: rect_label, align: "center", x: (x0+x1)/2.0, xref:'x', xanchor: "center", y: y0, yanchor: "bottom", yref:"paper", font:{size:10, family:"Arial",color:"grey"}, opacity:0.8}
                                         annotations.push(annotation)
                                     }
                                 }
@@ -402,7 +411,7 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
         clickmode:'event+select',
         shapes: shapes,
         annotations: annotations,
-        //uirevision: "fwef",
+        uirevision: true,
     }
     return layout
 }
