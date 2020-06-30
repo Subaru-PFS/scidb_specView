@@ -407,7 +407,7 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
         yaxis: {anchor: "x", title: y_axis_label, showgrid:false, showexponent: 'last', exponentformat: 'power', automargin: true,},
         //xaxis_title:x_axis_label, yaxis_title:y_axis_label,
         font:{family:"Courier New, monospace", size:18, color:"#7f7f7f"},
-        plot_bgcolor:'rgb(250,250,250)',
+        plot_bgcolor:'rgb(255,255,255)',
         clickmode:'event+select',
         shapes: shapes,
         annotations: annotations,
