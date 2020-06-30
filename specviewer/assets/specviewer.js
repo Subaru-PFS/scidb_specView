@@ -366,7 +366,7 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
                                     y0 = 0.0
                                     y1 = 1.0
                                     if(x0 >= ranges.x_range[0] && x0 <= ranges.x_range[1]){
-                                        rectangle =  {type: 'rect', name:rect_label,  layer:'below', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:0.5, color:"lightgrey"}, opacity:0.15, fillcolor:"rgb(211,211,211)"}
+                                        rectangle =  {type: 'rect', name:rect_label,  layer:'below', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:0.5, color:"lightgrey"}, opacity:0.25, fillcolor:"rgb(211,211,211)"}
                                         shapes.push(rectangle)
                                         annotation = {showarrow: false, text: rect_label, align: "center", x: (x0+x1)/2.0, xref:'x', xanchor: "center", y: y0, yanchor: "bottom", yref:"paper", font:{size:10, family:"Arial",color:"grey"}, opacity:0.8}
                                         annotations.push(annotation)
