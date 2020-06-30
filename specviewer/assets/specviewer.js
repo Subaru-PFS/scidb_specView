@@ -310,7 +310,7 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
                 }
             }else{
                 if(selected_masks[mask.id] == null){
-                    selected_masks[mask.id] = {label:mask.id, value:{id:mask.id, trace:mask.trace, catalog:mask.catalog,bit:parseInt(mask.bit)}}
+                    selected_masks[mask.id] = {label:mask.id, value:{id:mask.id, trace:mask.trace, name:mask.name, catalog:mask.catalog, bit:parseInt(mask.bit)}}
                 }
             }
         }
