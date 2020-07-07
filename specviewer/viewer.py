@@ -48,7 +48,6 @@ from specviewer.data_models import WavelenghUnit, FluxUnit, FittingModels
 from specviewer.colors import get_next_color
 from specviewer.flux import fnu_to_abmag,fnu_to_flambda,flambda_to_fnu,flambda_to_abmag,abmag_to_fnu,abmag_to_flambda
 from astropy.modeling import models, fitting
-from lmfit.models import Model, LinearModel, GaussianModel, LorentzianModel, VoigtModel
 
 
 process_manager = multiprocessing.Manager()
