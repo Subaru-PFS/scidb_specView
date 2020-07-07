@@ -150,6 +150,7 @@ def get_spectrum_list_from_fits(hdulist, name, add_sky=False, add_model=False, a
             spectrum_sky.flux = [1.0*10**-17*float(x) for x in c['sky']]
             spectrum_sky.wavelength_unit = WavelenghUnit.ANGSTROM
             spectrum_sky.flux_unit = FluxUnit.F_lambda
+            spectrum_sky.ancestors.append(name)
             if np.sum(np.asarray(spectrum_sky.flux) <= 0, axis=0):
                 spectrum_sky.flambda = [f for f in spectrum_sky.flux]
 
@@ -162,6 +163,7 @@ def get_spectrum_list_from_fits(hdulist, name, add_sky=False, add_model=False, a
             spectrum_error.flux = [1.0*10**-17*np.sqrt(float(1.0/x)) for x in c['ivar']]
             spectrum_error.wavelength_unit = WavelenghUnit.ANGSTROM
             spectrum_error.flux_unit = FluxUnit.F_lambda
+            spectrum_error.ancestors.append(name)
             if np.sum(np.asarray(spectrum_sky.flux) <= 0, axis=0):
                 spectrum_sky.flambda = [f for f in spectrum_sky.flux]
 
@@ -174,6 +176,7 @@ def get_spectrum_list_from_fits(hdulist, name, add_sky=False, add_model=False, a
             spectrum_model.flux = [1.0*10**-17*float(x) for x in c['model']]
             spectrum_model.wavelength_unit = WavelenghUnit.ANGSTROM
             spectrum_model.flux_unit = FluxUnit.F_lambda
+            spectrum_model.ancestors.append(name)
             if np.sum(np.asarray(spectrum_model.flux) <= 0, axis=0):
                 spectrum_model.flambda = [f for f in spectrum_model.flux]
 

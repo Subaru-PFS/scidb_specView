@@ -6,7 +6,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 from specviewer import app, refresh_time, app_base_directory
-from specviewer.data_models import WavelenghUnit
+from specviewer.data_models import WavelenghUnit, FluxUnit
 from datetime import datetime
 import time
 from dash import no_update
@@ -167,12 +167,9 @@ def load_callbacks(self): # self is passed as the Viewer class
                 function_name='set_dropdown_options'
             ),
             Output('dropdown-for-traces', 'options'),
-            # [Input('store', 'data')]
-            # [Input('store', 'data')],
             [Input('store', 'modified_timestamp')],
             [State('store', 'data')]
         )
-
 
         app.clientside_callback(
             ClientsideFunction(
@@ -180,23 +177,43 @@ def load_callbacks(self): # self is passed as the Viewer class
                 function_name='set_masks_dropdown'
             ),
             Output('dropdown-for-masks', 'options'),
-            # [Input('store', 'data')]
-            # [Input('store', 'data')],
             [Input('dropdown-for-traces', 'options')],
             [State('store', 'data')]
         )
 
+        app.clientside_callback(
+            ClientsideFunction(
+                namespace='clientside',
+                function_name='set_fitting_models_info'
+            ),
+            Output('fitting_models_info', 'children'),
+            [Input('store', 'modified_timestamp')],
+            [State('store', 'data')]
+        )
+
+        app.clientside_callback(
+            ClientsideFunction(
+                namespace='clientside',
+                function_name='select_all_traces_in_dropdown'
+            ),
+            Output('dropdown-for-traces', 'value'),
+            [Input("select_all_traces_button", "n_clicks")],
+            [State('store', 'data')]
+        )
 
         if self.as_website:
+
 
             @app.callback(
                 Output('store', 'data'),
                 [Input("remove_trace_button", "n_clicks"),
                  Input('upload-data', 'contents'),
                  Input('trace_smooth_button', 'n_clicks'),
+                 Input('trace_smooth_substract_button', 'n_clicks'),
                  Input('trace_unsmooth_button', 'n_clicks'),
                  Input('wavelength-unit', 'value'),
                  Input('flux-unit', 'value'),
+                 Input('model_fit_button', 'n_clicks'),
                 ],
                 [State('upload-data', 'filename'),
                  State('upload-data', 'last_modified'),
@@ -206,12 +223,15 @@ def load_callbacks(self): # self is passed as the Viewer class
                  State('smoothing_kernels_dropdown', 'value'),
                  State('kernel_width_box', 'value'),
                  State('input-options-checklist', 'value'),
+                 State('fitting-model-dropdown', 'value'),
+                 State('spec-graph', 'selectedData'),
+                 State('remove_children_checklist', 'value'),
                  ])
             # def process_input(n_intervals, list_of_contents, list_of_names, list_of_dates, data, dropdown_values):
-            def process_input(n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button,
-                              n_clicks_unsmooth_button, wavelength_unit, flux_unit,
-                              list_of_names,list_of_dates, data,data_timestamp,dropdown_trace_names,
-                              smoothing_kernel_name,smoothing_kernel_width, input_checklist):
+            def process_input(n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button,n_clicks_smooth_substract_button,
+                              n_clicks_unsmooth_button, wavelength_unit, flux_unit, n_clicks_model_fit_button,
+                              list_of_names, list_of_dates, data, data_timestamp, dropdown_trace_names,
+                              smoothing_kernel_name, smoothing_kernel_width, input_checklist, fitting_models, selected_data, remove_children_checklist):
                 try:
 
                     # self.debug_data['process_uploaded_file'] = "process_uploaded_file"
@@ -246,18 +266,28 @@ def load_callbacks(self): # self is passed as the Viewer class
 
                     elif task_name == "remove_trace_button" and len(dropdown_trace_names) > 0:
                         data_dict = self.get_data_dict(data)
-                        self._remove_traces(dropdown_trace_names, data_dict, do_update_client=False)
+                        also_remove_children = True if len(remove_children_checklist)>0 else False
+                        self._remove_traces(dropdown_trace_names, data_dict, do_update_client=False, also_remove_children=also_remove_children)
                         #return json.dumps(data_dict)
                         return data_dict
 
-                    elif task_name == "trace_smooth_button" and len(dropdown_trace_names)>0 and len(smoothing_kernel_name) > 0:
+                    elif (task_name == "trace_smooth_button" or task_name == 'trace_smooth_substract_button') and len(dropdown_trace_names)>0 and len(smoothing_kernel_name) > 0:
                         data_dict = self.get_data_dict(data)
-                        self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False, kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),kernel_function=None)
+                        do_substract = True if task_name == 'trace_smooth_substract_button' else False
+                        self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False, kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),kernel_function=None, do_substract=do_substract)
                         return data_dict
 
                     elif task_name == "trace_unsmooth_button" and len(dropdown_trace_names)>0:
                         data_dict = self.get_data_dict(data)
                         self._unsmooth_trace(dropdown_trace_names, data_dict, do_update_client=False)
+                        return data_dict
+
+                    elif task_name == "model_fit_button":
+                        if selected_data is None or selected_data.get('range') is None or len(fitting_models) == 0 \
+                           or len(dropdown_trace_names) == 0 or flux_unit == FluxUnit.AB_magnitude:
+                            return no_update
+                        data_dict = self.get_data_dict(data)
+                        self._fit_model_to_flux(dropdown_trace_names, data_dict, fitting_models, selected_data, do_update_client=False)
                         return data_dict
 
                     else:
@@ -293,10 +323,13 @@ def load_callbacks(self): # self is passed as the Viewer class
                  Input("remove_trace_button", "n_clicks"),
                  Input('upload-data', 'contents'),
                  Input('trace_smooth_button', 'n_clicks'),
+                 Input('trace_smooth_substract_button', 'n_clicks'),
                  Input('trace_unsmooth_button', 'n_clicks'),
                  Input('wavelength-unit', 'value'),
                  Input('flux-unit', 'value'),
-                ],
+                 Input('model_fit_button', 'n_clicks'),
+                 Input('spec-graph', 'selectedData'),
+                 ],
                 [State('upload-data', 'filename'),
                  State('upload-data', 'last_modified'),
                  State('store', 'data'),
@@ -305,12 +338,14 @@ def load_callbacks(self): # self is passed as the Viewer class
                  State('smoothing_kernels_dropdown', 'value'),
                  State('kernel_width_box', 'value'),
                  State('input-options-checklist', 'value'),
+                 State('fitting-model-dropdown', 'value'),
+                 State('remove_children_checklist', 'value'),
                  ])
             #def process_input(n_intervals, list_of_contents, list_of_names, list_of_dates, data, dropdown_values):
-            def process_input(n_intervals, n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button,
-                              n_clicks_unsmooth_button, wavelength_unit, flux_unit, list_of_names,list_of_dates, data,
-                              data_timestamp, dropdown_trace_names,smoothing_kernel_name,smoothing_kernel_width,
-                              input_checklist):
+            def process_input(n_intervals, n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button, n_clicks_smooth_substract_button,
+                              n_clicks_unsmooth_button, wavelength_unit, flux_unit, n_clicks_model_fit_button,selected_data,
+                              list_of_names,list_of_dates, data, data_timestamp, dropdown_trace_names,
+                              smoothing_kernel_name,smoothing_kernel_width, input_checklist, fitting_models, remove_children_checklist):
                 try:
                     task_name = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
                     if task_name == "synch_interval":
@@ -363,30 +398,52 @@ def load_callbacks(self): # self is passed as the Viewer class
                     elif task_name == "remove_trace_button" and len(dropdown_trace_names) > 0:
                         self.write_info("Remove data button: remove of " + str(dropdown_trace_names))
                         data_dict = self.get_data_dict(data)
+                        also_remove_children = True if len(remove_children_checklist) > 0 else False
                         self.write_info("Remove data button: Initial Traces in datadict: " + str(
                             [trace for trace in data_dict['traces']]) + ", Initial Traces in appdate: " + str(
                             [trace for trace in self.app_data['traces']]))
-                        self._remove_traces(dropdown_trace_names, data_dict, do_update_client=False)
-                        self._remove_traces(dropdown_trace_names, self.app_data, do_update_client=False)
+                        self._remove_traces(dropdown_trace_names, data_dict, do_update_client=False, also_remove_children=also_remove_children)
+                        self._remove_traces(dropdown_trace_names, self.app_data, do_update_client=False, also_remove_children=also_remove_children)
                         self.write_info("Remove data button: remove ended. Traces in datadict: " + str(
                             [trace for trace in data_dict['traces']]) + ", Traces in appdata: " + str(
                             [trace for trace in self.app_data['traces']]))
                         return data_dict
 
-                    elif task_name == "trace_smooth_button" and len(dropdown_trace_names)>0 and len(smoothing_kernel_name) > 0:
+                    elif (task_name == "trace_smooth_button" or task_name == 'trace_smooth_substract_button') and len(dropdown_trace_names)>0 and len(smoothing_kernel_name) > 0:
                         data_dict = self.get_data_dict(data)
+                        do_substract = True if task_name == 'trace_smooth_substract_button' else False
                         self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False,
                                            kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),
-                                           kernel_function=None)
+                                           kernel_function=None, do_substract=do_substract)
                         self._smooth_trace(dropdown_trace_names, self.app_data, do_update_client=False,
                                            kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),
-                                           kernel_function=None)
+                                           kernel_function=None, do_substract=do_substract)
                         return data_dict
 
                     elif task_name == "trace_unsmooth_button" and len(dropdown_trace_names)>0:
                         data_dict = self.get_data_dict(data)
                         self._unsmooth_trace(dropdown_trace_names, data_dict, do_update_client=False)
                         self._unsmooth_trace(dropdown_trace_names, self.app_data, do_update_client=False)
+                        return data_dict
+
+                    elif task_name == "model_fit_button":
+                        if selected_data is None or selected_data.get('range') is None or len(fitting_models) == 0 \
+                           or len(dropdown_trace_names) == 0 or flux_unit == FluxUnit.AB_magnitude:
+                            return no_update
+                        data_dict = self.get_data_dict(data)
+                        self._fit_model_to_flux(dropdown_trace_names, self.app_data, fitting_models, selected_data, do_update_client=False)
+                        self._fit_model_to_flux(dropdown_trace_names, data_dict, fitting_models, selected_data, do_update_client=False)
+
+                        self.write_info("Fitted model . Traces in datadict: " + str(
+                            [trace for trace in data_dict['traces']]) + ", Traces in appdata: " + str(
+                            [trace for trace in self.app_data['traces']]))
+
+                        return data_dict
+
+                    elif task_name == "spec-graph":
+                        data_dict = self.get_data_dict(data)
+                        data_dict['selection'] = selected_data
+                        self.app_data['selection'] = selected_data
                         return data_dict
 
                     else:

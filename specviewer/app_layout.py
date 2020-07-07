@@ -6,11 +6,13 @@ import dash_html_components as html
 from textwrap import dedent as d
 from specviewer.spectral_lines import spectral_lines
 import json
-
+from specviewer.data_models import fitting_model_types
 
 spectral_line_dropdown_options = []
 spectral_line_dropdown_options.append({'label':'all', 'value':'all'})
 spectral_line_dropdown_options = spectral_line_dropdown_options + [ {'label':spectral_lines[line]['fullname'], 'value':spectral_lines[line]['fullname']} for line in spectral_lines]
+fitting_model_options = [{'label':type, 'value':type} for type in fitting_model_types]
+
 
 styles = {
     'pre': {
@@ -49,7 +51,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
             html.Div(id="top-panel-div1", className="col-md-2", style={}, children=[
                 html.H2(["Data Input:"]),
                 html.Br(),
-                html.H5(["Include:"]),
+                html.H5(["also include:"]),
                 dcc.Checklist(
                     id="input-options-checklist",
                     options=[
@@ -82,7 +84,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                 html.Br(),
                 html.Hr(),
                 html.Br(),
-                html.H2(["Actions on trace(s):"]),
+                html.H2(["Traces:"]),
                 dcc.Dropdown(
                     id='dropdown-for-traces',
                     options=[],  # [{'label': label, 'value': label} for label in labels],
@@ -94,8 +96,22 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     persistence=True,
                     persistence_type="session"
                 ),
+                html.Button("select all", id="select_all_traces_button"),
                 html.Br(),
                 html.Button("Remove selected", id="remove_trace_button"),
+                html.Br(),
+                dcc.Checklist(
+                    id="remove_children_checklist",
+                    options=[
+                        {'label': 'also remove derived traces', 'value': 'remove_children'},
+                    ],
+                    value=[],  # 'add_model'
+                    labelStyle={'display': 'inline-block'},
+                    persistence=True,
+                    persistence_type="session",
+                    persisted_props=["value"],
+                ),
+
                 html.Br(),
                 html.Br(),
                 html.H3(["Smoothing:"]),
@@ -122,7 +138,8 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                 ]),
                 html.Br(),
                 html.Button('Smooth', id='trace_smooth_button'),
-                html.Button('Unsmooth', id='trace_unsmooth_button'),
+                html.Button('Substract smoothed', id='trace_smooth_substract_button'),
+                html.Button('Reset', id='trace_unsmooth_button'),
 
                 html.Br(),
                 html.Br(),
@@ -145,7 +162,24 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                                   persistence=True,
                                   persistence_type="session",
                 ),
-
+                html.Br(),
+                html.Br(),
+                html.H3(["Model Fitting:"]),
+                dcc.Dropdown(
+                    id='fitting-model-dropdown',
+                    options= fitting_model_options,
+                    value='',
+                    placeholder="Select line profile",
+                    multi=True,
+                    style={},
+                    persistence=True,
+                    persistence_type="session"
+                ),
+                html.Br(),
+                html.Button('Fit model(s)', id='model_fit_button'),
+                html.Br(),
+                html.Div(id='fitting_models_info', children="text"),
+                html.Br(),
                 html.Div(dcc.Input(style={'display':'none'}, id='input-box', type='text')),
                 html.Button('Submit', id='button', style={'display':'none'}),
                 html.Div(id='output-container-button', style={'display':'none'},
@@ -238,6 +272,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
 
 
                 html.Div(style={'display':'none'}, children=[
+                #html.Div(style={}, children=[
 
                     html.Div(className='row', children=[
                         html.Div([

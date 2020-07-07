@@ -3,6 +3,14 @@ from enum import Enum
 import json
 
 
+class FittingModels():
+    GAUSSIAN_PLUS_LINEAR = "gaussian + linear"
+    LORENTZIAN_PLUS_LINEAR = "lorentzian + linear"
+    VOIGT_PLUS_LINEAR = "voigt + linear"
+
+fitting_model_types = [FittingModels.GAUSSIAN_PLUS_LINEAR, FittingModels.LORENTZIAN_PLUS_LINEAR, FittingModels.VOIGT_PLUS_LINEAR]
+
+
 class WavelenghUnit:
     ANGSTROM = "angstrom"
     NANOMETER = "nanometer"
@@ -29,7 +37,7 @@ class Trace:
         return str(self.to_dict())
 
 class Spectrum:
-    def __init__(self,name=None, wavelength=None, flux=None, sky=None, model=None, masks=None, mask_bits=None, wavelength_unit=None, flux_unit=None, flambda=None, catalog=None):
+    def __init__(self,name=None, wavelength=None, flux=None, sky=None, model=None, masks=None, mask_bits=None, wavelength_unit=None, flux_unit=None, flambda=None, catalog=None, ancestors=[]):
         self.name = name
         self.wavelength = wavelength
         self.sky = sky
@@ -40,6 +48,7 @@ class Spectrum:
         self.flux_unit = flux_unit
         self.flambda = flambda
         self.catalog = catalog
+        self.ancestors = ancestors
 
 
     def to_dict(self):

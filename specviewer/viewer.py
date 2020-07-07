@@ -43,9 +43,13 @@ import traceback
 import dash_table
 from pathlib import Path
 from astropy.convolution import convolve, Gaussian1DKernel, Box1DKernel
-from specviewer.data_models import WavelenghUnit, FluxUnit
+
+from specviewer.data_models import WavelenghUnit, FluxUnit, FittingModels
 from specviewer.colors import get_next_color
 from specviewer.flux import fnu_to_abmag,fnu_to_flambda,flambda_to_fnu,flambda_to_abmag,abmag_to_fnu,abmag_to_flambda
+from astropy.modeling import models, fitting
+from lmfit.models import Model, LinearModel, GaussianModel, LorentzianModel, VoigtModel
+
 
 process_manager = multiprocessing.Manager()
 jupyter_viewer = AppViewer()
@@ -80,6 +84,7 @@ class Viewer():
         self.app_data = app_data
         self.app_data_timestamp = app_data_timestamp
         self.app_data['traces'] = {}
+        self.app_data['fitted_models'] = {}
         self.app_data['selection'] = {}
         self.app_data_timestamp['timestamp'] = 0
         self.debug_data = debug_data
@@ -99,9 +104,6 @@ class Viewer():
         #app.layout = self.load_app_layout
         app.layout = app_layout.load_app_layout(self)
         callbacks.load_callbacks(self)
-
-    def get_new_trace_color(self,application_data):
-        traces = application_data['traces']
 
     def parse_uploaded_file(self, contents, file_name, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=FluxUnit.F_lambda, add_sky=False, add_model=False, add_error=False, add_masks=True):
 
@@ -123,7 +125,7 @@ class Viewer():
         for spectrum in spectrum_list:
             trace = self.build_trace(spectrum.wavelength, spectrum.flux, spectrum.name, color="black", linewidth=1,
                                      alpha=0.8, wavelength_unit=spectrum.wavelength_unit, flux_unit=spectrum.flux_unit,
-                                     flambda=spectrum.flambda, masks=spectrum.masks, mask_bits=spectrum.mask_bits, catalog=spectrum.catalog)
+                                     flambda=spectrum.flambda, masks=spectrum.masks, mask_bits=spectrum.mask_bits, catalog=spectrum.catalog, ancestors=spectrum.ancestors)
             rescaled_traces.append(self.get_rescaled_axis_in_trace(trace, to_wavelength_unit=wavelength_unit,
                                                                    to_flux_unit=flux_unit))
         return rescaled_traces
@@ -254,11 +256,29 @@ class Viewer():
         print("Adding trace")
         return self.add_trace_to_data(self.app_data, name, trace, do_update_client = True)
 
-    def _remove_traces(self, trace_names, data, do_update_client=True):
+    def _remove_traces(self, trace_names, data, do_update_client=True, also_remove_children=False):
+
+        _traces_to_remove = [name for name in trace_names]
+        if also_remove_children:
+            for name in data['traces']:
+                for ancestor in data['traces'][name]['ancestors']:
+                    if ancestor in _traces_to_remove:
+                        if name not in _traces_to_remove:
+                            _traces_to_remove.append(name)
+
         traces = data['traces']
-        for trace_name in trace_names:
+        for trace_name in _traces_to_remove:
             traces.pop(trace_name)
         data['traces'] = traces
+
+        fitted_models = data['fitted_models']
+        fitted_models_names = [model for model in data['fitted_models']]
+        for model in fitted_models_names:
+            for trace_name in _traces_to_remove:
+                if trace_name == model:
+                    fitted_models.pop(model)
+        data['fitted_models'] = fitted_models
+
         if do_update_client:
             self.update_client()
 
@@ -268,10 +288,10 @@ class Viewer():
         app_data['traces'] = traces
         self.update_client()
 
-    def build_trace(self, x_coords=[], y_coords=[], name=None, parent=None, type=None, color="black", linewidth=1,
+    def build_trace(self, x_coords=[], y_coords=[], name=None, ancestors=[], type=None, color="black", linewidth=1,
                     alpha=1.0, x_coords_original=None, y_coords_original=None, wavelength_unit=WavelenghUnit.ANGSTROM,
                     flux_unit=FluxUnit.F_lambda, flambda=None, masks=None, mask_bits=None, catalog=None):
-        return {'name': name, 'x_coords': x_coords, 'y_coords': y_coords, 'type': type, 'parent': parent,
+        return {'name': name, 'x_coords': x_coords, 'y_coords': y_coords, 'type': type, 'ancestors':ancestors,
                 'visible': True, 'color': color, 'linewidth': linewidth, 'alpha': alpha,
                 'x_coords_original': x_coords_original, 'y_coords_original': y_coords_original,
                 'wavelength_unit':wavelength_unit, "flux_unit":flux_unit, "flambda":flambda, 'masks':masks,
@@ -282,9 +302,9 @@ class Viewer():
 
     def build_app_data(self, traces=None):
         if traces is None:
-            return {'traces': {}, 'selection':{}}
+            return {'traces': {}, 'fitted_models':{}, 'selection':{}}
         else:
-            return {'traces': traces, 'selection':{}}
+            return {'traces': traces, 'fitted_models':{}, 'selection':{}}
 
     def parse_contents(self, contents, filename, date):
         content_type, content_string = contents.split(',')
@@ -356,14 +376,14 @@ class Viewer():
             trace = application_data['traces'].get(trace_name)
             if trace['y_coords_original'] is not None and len(trace['y_coords_original'])>0:
                 trace['y_coords'] = trace.get('y_coords_original')
-                trace['y_coords_original'] = []
+                trace['y_coords_original'] = None
                 application_data['traces'][trace_name] = trace
 
         if do_update_client:
             self.update_client()
 
 
-    def _smooth_trace(self, trace_names, application_data, do_update_client=True, kernel="Gaussian1DKernel", kernel_width=20, kernel_function=None):
+    def _smooth_trace(self, trace_names, application_data, do_update_client=True, kernel="Gaussian1DKernel", kernel_width=20, kernel_function=None, do_substract=False):
         # https://specutils.readthedocs.io/en/stable/manipulation.html
         # https://docs.astropy.org/en/stable/convolution/kernels.html
         for trace_name in trace_names:
@@ -382,9 +402,16 @@ class Viewer():
 
                 if trace.get('y_coords_original') is None or len(trace['y_coords_original']) == 0: # has not been smoothed yet
                     smoothed_trace = convolve(trace['y_coords'], kernel_func)
+                    if do_substract:
+                        smoothed_trace = trace['y_coords'] - smoothed_trace
                     trace['y_coords_original'] = trace.get('y_coords')
                 else: # has been smoothed already; use original trace values
                     smoothed_trace = convolve(trace['y_coords_original'], kernel_func)
+                    if do_substract:
+                        smoothed_trace = trace['y_coords_original'] - smoothed_trace
+
+                if do_substract:
+                    trace['y_coords'] =  smoothed_trace
 
                 trace['y_coords'] = smoothed_trace
                 application_data['traces'][trace_name] = trace
@@ -438,6 +465,79 @@ class Viewer():
 
         trace['flux_unit'] = to_flux_unit
         return trace
+
+    def _fit_model_to_flux(self, trace_names, application_data, fitting_models, selected_data, do_update_client=True):
+        #http://learn.astropy.org/rst-tutorials/User-Defined-Model.html
+
+        x_range = selected_data.get('range').get('x')
+        y_range = selected_data.get('range').get('y')
+
+        for fitting_model in fitting_models:
+            for trace_name in trace_names:
+                #ind = trace_indexes[trace_name]
+                trace = application_data['traces'].get(trace_name)
+                x_array = np.asarray(trace['x_coords'])
+                y_array = np.asarray(trace['y_coords'])
+                ind = (x_array >= x_range[0]) & (x_array <= x_range[1]) & \
+                      (y_array >= y_range[0]) & (y_array <= y_range[1])
+                x = x_array[ind]
+                y = y_array[ind]
+                flambda = [f for f in np.asarray(trace['flambda'])[ind]] if trace['flambda'] is not None else None
+                x_coords_original = [f for f in np.asarray(trace['x_coords_original'])[ind]] if trace['x_coords_original'] is not None else None
+                y_coords_original = [f for f in np.asarray(trace['y_coords_original'])[ind]] if trace['y_coords_original'] is not None else None
+                location_param = np.mean(x)
+                amplitude_param = np.max(np.abs(y))
+                spread_param = (x_range[1]-x_range[0])/len(x)
+
+                if fitting_model == FittingModels.GAUSSIAN_PLUS_LINEAR:
+                    data_model = models.Gaussian1D(amplitude=amplitude_param, mean=location_param, stddev=spread_param) + models.Polynomial1D(degree=1)
+                elif fitting_model == FittingModels.LORENTZIAN_PLUS_LINEAR:
+                    data_model = models.Lorentz1D(amplitude=amplitude_param, x_0=location_param, fwhm=spread_param) + models.Polynomial1D(degree=1)
+                elif fitting_model == FittingModels.VOIGT_PLUS_LINEAR:
+                    data_model = models.Voigt1D(x_0=location_param, amplitude_L=amplitude_param, fwhm_L=spread_param, fwhm_G=spread_param) + models.Polynomial1D(degree=1)
+                else:
+                    raise Exception("Unsupported fitting model " + str(fitting_model))
+
+                fitter = fitting.LevMarLSQFitter()
+                fitted_model = fitter(data_model, x, y)
+                x_grid = np.linspace(x_range[0], x_range[1], 5*len(x))
+                y_grid = fitted_model(x_grid)
+
+                fitted_trace_name = "fit" + str(len(application_data['fitted_models']) + 1) + "_" + trace_name
+
+                ancestors = trace['ancestors'] + [trace_name]
+
+                fitted_trace = self.build_trace(x_coords=[x for x in x_grid], y_coords=[y for y in y_grid],
+                                                name=fitted_trace_name, ancestors=ancestors,
+                                                type=trace['type'], color=None, linewidth=1, alpha=1.0,
+                                                x_coords_original=x_coords_original, y_coords_original=y_coords_original,
+                                                wavelength_unit=trace['wavelength_unit'], flux_unit=trace['flux_unit'],
+                                                flambda=flambda, masks=None, mask_bits=None, catalog=None)
+
+                self.set_color_for_new_trace(fitted_trace, application_data)
+                # add to application data:
+                traces = application_data['traces']
+                traces[fitted_trace_name] = fitted_trace
+                application_data['traces'] = traces
+
+                fitted_info = {}
+                fitted_info['name'] = fitted_trace_name
+                fitted_info['ancestors'] = ancestors
+                fitted_info['model'] = fitting_model
+                fitted_info['parameters'] = {x:y for (x,y) in zip(fitted_model.param_names, fitted_model.parameters)}
+                fitted_info['selection_range'] = {'x_range':x_range, 'y_range':y_range}
+
+                # add to application data:
+                fitted_models = application_data['fitted_models']
+                fitted_models[fitted_trace_name] = fitted_info
+                application_data['fitted_models'] = fitted_models
+
+                application_data['traces'][fitted_trace_name] = fitted_trace
+                application_data['fitted_models'][fitted_trace_name] = fitted_info
+
+
+        if do_update_client:
+            self.update_client()
 
 
     def resample(self):

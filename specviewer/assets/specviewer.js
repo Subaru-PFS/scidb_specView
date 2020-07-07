@@ -6,12 +6,7 @@ window.PlotlyConfig = {MathJaxConfig: 'local'}
 
 window.dash_clientside = Object.assign({}, window.dash_clientside, {
     clientside: {
-/*
-        large_params_function: function(data) {
-            var a = 1
-            return [{label: 'trace1', value: 'trace1'}]
-        }
-*/
+
         set_dropdown_options: function(modified_timestamp, data) {
             options = []
             if(data != null){
@@ -19,6 +14,24 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                 for(i=0; i<trace_names.length; i++){
                     trace_name = trace_names[i]
                     options.push({label: trace_name, value: trace_name})
+                }
+            }
+            return options
+        },
+
+        set_fitting_models_info: function(modified_timestamp, data) {
+            if(data != null){
+                return JSON.stringify(data['fitted_models'])
+            }
+        },
+
+        select_all_traces_in_dropdown : function(select_all_traces_button_clicks, data) {
+            options = []
+            if(data != null){
+                trace_names = Object.keys(data.traces)
+                for(i=0; i<trace_names.length; i++){
+                    trace_name = trace_names[i]
+                    options.push(trace_name)
                 }
             }
             return options
