@@ -184,9 +184,9 @@ def load_callbacks(self): # self is passed as the Viewer class
         app.clientside_callback(
             ClientsideFunction(
                 namespace='clientside',
-                function_name='set_fitting_models_info'
+                function_name='set_fitted_models_table'
             ),
-            Output('fitting_models_info', 'children'),
+            Output('fitted_models_table', 'children'),
             [Input('store', 'modified_timestamp')],
             [State('store', 'data')]
         )

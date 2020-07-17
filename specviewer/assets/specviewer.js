@@ -19,9 +19,25 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
             return options
         },
 
-        set_fitting_models_info: function(modified_timestamp, data) {
+        set_fitted_models_table: function(modified_timestamp, data) {
             if(data != null){
-                return JSON.stringify(data['fitted_models'])
+                var tab = "<table id='fitted_models_table'>"
+                for(fitted_model_name in data['fitted_models']){
+                    fitted_model = data['fitted_models'][fitted_model_name]
+                    // create header:
+                    tab += "<tr><th><u>" + fitted_model.name + "</u></th></tr>"
+                    //add properties:
+                    tab += "<tr><td>model:</td><td>" + fitted_model.model + "</td></tr>"
+                    for(parameter_name in fitted_model['parameters']){
+                        tab += "<tr><td>" +  parameter_name + "</td><td>" + fitted_model['parameters'][parameter_name] + "</td></tr>"
+                    }
+                    if(fitted_model['selection_range'] != null){
+                        //tab += "<tr><td>  x_range  </td><td>[" + fitted_model['selection_range']['x_range'][0] +  ", " + fitted_model['selection_range']['x_range'][1]  + "]</td></tr>"
+                        //tab += "<tr><td>  y_range  </td><td>[" + fitted_model['selection_range']['y_range'][0] +  ", " + fitted_model['selection_range']['y_range'][1]  + "]</td></tr>"
+                    }
+                }
+                tab += "</table>"
+                return tab
             }
         },
 
@@ -333,6 +349,9 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
             trace_name = trace_dropdown[h]
             if(data['traces'][trace_name] != null && data['traces'][trace_name]['masks'] != null){
 
+                mask_color = data['traces'][trace_name].color
+                //mask_color = "rgb(211,211,211)"
+
                 trace_catalog = data['traces'][trace_name]['catalog']
                 if(data['traces'][trace_name]['masks']['and_mask'] != null){
                     and_mask = data['traces'][trace_name]['masks']['and_mask']
@@ -379,9 +398,9 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
                                     y0 = 0.0
                                     y1 = 1.0
                                     if(x0 >= ranges.x_range[0] && x0 <= ranges.x_range[1]){
-                                        rectangle =  {type: 'rect', name:rect_label,  layer:'below', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:0.5, color:"lightgrey"}, opacity:0.25, fillcolor:"rgb(211,211,211)"}
+                                        rectangle =  {type: 'rect', name:rect_label,  layer:'below', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:0.5, color:"lightgrey"}, opacity:0.20, fillcolor:mask_color}
                                         shapes.push(rectangle)
-                                        annotation = {showarrow: false, text: rect_label, align: "center", x: (x0+x1)/2.0, xref:'x', xanchor: "center", y: y0, yanchor: "bottom", yref:"paper", font:{size:10, family:"Arial",color:"grey"}, opacity:0.8}
+                                        annotation = {showarrow: false, text: rect_label, align: "center", x: (x0+x1)/2.0, xref:'x', xanchor: "center", y: y0, yanchor: "bottom", yref:"paper", font:{size:13, family:"Arial",color:"darkgrey"}, opacity:0.8}
                                         annotations.push(annotation)
                                     }
                                 }

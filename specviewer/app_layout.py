@@ -48,7 +48,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
         html.Div(id="top-panel-div", className="row", style= {}, children=[
 
             ## first column --------------------------------------------------------------------------------------------
-            html.Div(id="top-panel-div1", className="col-md-2", style={}, children=[
+            html.Div(id="top-panel-div1", className="col-sm-3", style={}, children=[
                 html.H2(["Data Input:"]),
                 html.Br(),
                 html.H5(["also include:"]),
@@ -116,7 +116,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                 html.Br(),
                 html.H3(["Smoothing:"]),
                 html.Div(className="row", children=[
-                    html.Div(className="col-md-6", children=[
+                    html.Div(className="col-sm-6", children=[
                         html.Span(["Kernel:"]),
                         dcc.Dropdown(
                             id='smoothing_kernels_dropdown',
@@ -178,17 +178,20 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                 html.Br(),
                 html.Button('Fit model(s)', id='model_fit_button'),
                 html.Br(),
-                html.Div(id='fitting_models_info', children="text"),
+                html.Br(),
+                dcc.Markdown(id = "fitted_models_table", children='', dangerously_allow_html=True),
+                html.Br(),
                 html.Br(),
                 html.Div(dcc.Input(style={'display':'none'}, id='input-box', type='text')),
                 html.Button('Submit', id='button', style={'display':'none'}),
+                html.Br(),
                 html.Div(id='output-container-button', style={'display':'none'},
                          children='Enter a value and press submit'),
 
 
             ]),
             ## next column --------------------------------------------------------------------------------------------
-            html.Div(id="top-panel-div2", className="col-md-10", style={}, children=[
+            html.Div(id="top-panel-div2", className="col-sm-9", style={}, children=[
                 html.Br(),
                 html.H1(["Spectrum Viewer"] , className="text-center"),
                 dcc.Graph(
@@ -199,7 +202,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     #animate=True # gives lots of problems
                 ),
                 html.Div(className="row",children=[
-                    html.Div(className="col-md-2", children=[
+                    html.Div(className="col-sm-2", children=[
                         html.H3(["Wavelength unit"]),
                         dcc.Dropdown(
                             id='wavelength-unit',
@@ -226,7 +229,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             style={}, clearable=False
                         ),
                     ]),
-                    html.Div(className="col-md-2", children=[
+                    html.Div(className="col-sm-2", children=[
                         #https://dash.plotly.com/dash-daq/booleanswitch
                         html.H3("SpectralLines:"),
                         daq.BooleanSwitch(id="spectral-lines-switch",
@@ -265,7 +268,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             step=0.01
                         ),
                     ]),
-                    html.Div(className="col-md-6", children=[
+                    html.Div(className="col-sm-6", children=[
                     ]),
                 ]),
 
