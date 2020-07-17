@@ -525,6 +525,8 @@ class Viewer():
                 fitted_info['model'] = fitting_model
                 fitted_info['parameters'] = {x:y for (x,y) in zip(fitted_model.param_names, fitted_model.parameters)}
                 fitted_info['selection_range'] = {'x_range':x_range, 'y_range':y_range}
+                fitted_info['wavelength_unit'] = trace['wavelength_unit']
+                fitted_info['flux_unit'] = trace['flux_unit']
 
                 # add to application data:
                 fitted_models = application_data['fitted_models']

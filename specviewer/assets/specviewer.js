@@ -35,6 +35,10 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                         //tab += "<tr><td>  x_range  </td><td>[" + fitted_model['selection_range']['x_range'][0] +  ", " + fitted_model['selection_range']['x_range'][1]  + "]</td></tr>"
                         //tab += "<tr><td>  y_range  </td><td>[" + fitted_model['selection_range']['y_range'][0] +  ", " + fitted_model['selection_range']['y_range'][1]  + "]</td></tr>"
                     }
+                    tab += "<tr><td>Wavelength unit:</td><td>" + fitted_model['wavelength_unit'] + "</td></tr>"
+                    tab += "<tr><td>Flux unit:</td><td>" + fitted_model['flux_unit'] + "</td></tr>"
+
+
                 }
                 tab += "</table>"
                 return tab
