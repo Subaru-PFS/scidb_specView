@@ -48,7 +48,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
         html.Div(id="top-panel-div", className="row", style= {}, children=[
 
             ## first column --------------------------------------------------------------------------------------------
-            html.Div(id="top-panel-div1", className="col-sm-3", style={}, children=[
+            html.Div(id="top-panel-div1", className="col-sm-2", style={}, children=[
                 html.H2(["Data Input:"]),
                 html.Br(),
                 html.H5(["also include:"]),
@@ -191,7 +191,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
 
             ]),
             ## next column --------------------------------------------------------------------------------------------
-            html.Div(id="top-panel-div2", className="col-sm-9", style={}, children=[
+            html.Div(id="top-panel-div2", className="col-sm-10", style={}, children=[
                 html.Br(),
                 html.H1(["Spectrum Viewer"] , className="text-center"),
                 dcc.Graph(

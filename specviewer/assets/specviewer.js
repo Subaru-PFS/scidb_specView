@@ -57,53 +57,48 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
             return options
         },
 
-        set_masks_dropdown: function(trace_dropdown_options, data){
+        set_masks_dropdown: function(modified_timestamp, data){
 
             mask_dropdown_options = []
 
             catalogs_list = []
             options_ids = {}
-            if(trace_dropdown_options.length > 0){
-                for( trace_name in data['traces']){
-                    for(trace_option in trace_dropdown_options){
-                        if(trace_name == trace_dropdown_options[trace_option].value){
+            for( trace_name in data['traces']){
+                //adding "all" entry:
+                catalog = data['traces'][trace_name].catalog
+                label_all = trace_name + " ALL MASKS"
+                options_for_all_entry = []
+                options_ids = {} // stores the IDs of all masks already added to the mask_dropdown_options, so that there are no duplicates
+                if( data['traces'][trace_name]['masks'] != null && data['traces'][trace_name]['masks']['and_mask_values'] != null){
+                    for(mask_id in data['traces'][trace_name]['masks']['and_mask_values']){
+                        label_value = mask_id
+                        bit = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].bit
+                        catalog = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].catalog
+                        name = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].name
+                        options_for_all_entry.push({label:label_value, value:{id:label_value, trace:trace_name, bit:bit, catalog:catalog, name:name, is_all:false}})
+                    }
+                    if(options_ids[label_all] == null){
+                        val = JSON.stringify({id:label_all, trace:trace_name, bit:null, catalog:catalog, is_all:true, options_for_all_entry:options_for_all_entry})
+                        mask_option = {label:label_all, value:val}
+                        mask_dropdown_options.push(mask_option)
+                        options_ids[label_all] = mask_option
+                    }
 
-                            //adding "all" entry:
-                            catalog = data['traces'][trace_name].catalog
-                            label_all = catalog + " all masks"
-                            options_for_all_entry = []
-                            options_ids = {}
-                            for(mask_bit in data['traces'][trace_name]['mask_bits']){
-                                label_value = mask_bit
-                                bit = data['traces'][trace_name]['mask_bits'][mask_bit].bit
-                                catalog = data['traces'][trace_name]['mask_bits'][mask_bit].catalog
-                                name = data['traces'][trace_name]['mask_bits'][mask_bit].name
-                                options_for_all_entry.push({label:label_value, value:{id:label_value, trace:trace_name, bit:bit, catalog:catalog, name:name, is_all:false}})
-                            }
-                            if(options_ids[label_all] == null){
-                                val = JSON.stringify({id:label_all, trace:trace_name, bit:null, catalog:catalog, is_all:true, options_for_all_entry:options_for_all_entry})
-                                mask_option = {label:label_all, value:val}
-                                mask_dropdown_options.push(mask_option)
-                                options_ids[label_all] = mask_option
-                            }
+                    //adding single mask entries
+                    for(mask_id in data['traces'][trace_name]['masks']['and_mask_values']){
+                        label_value = mask_id
+                        bit = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].bit
+                        catalog = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].catalog
+                        name = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].name
 
-                            //adding single mask entries
-                            for(mask_bit in data['traces'][trace_name]['mask_bits']){
-                                label_value = mask_bit
-                                bit = data['traces'][trace_name]['mask_bits'][mask_bit].bit
-                                catalog = data['traces'][trace_name]['mask_bits'][mask_bit].catalog
-                                name = data['traces'][trace_name]['mask_bits'][mask_bit].name
-
-                                if(options_ids[label_value] == null){
-                                    mask_option = {label:label_value, value:JSON.stringify({id:mask_bit, trace:trace_name, bit:bit, catalog:catalog, name:name, is_all:false})}
-                                    mask_dropdown_options.push(mask_option)
-                                    options_ids[label_value] = mask_option
-                                }
-                            }
-
+                        if(options_ids[label_value] == null){
+                            mask_option = {label:label_value, value:JSON.stringify({id:mask_id, trace:trace_name, bit:bit, catalog:catalog, name:name, is_all:false})}
+                            mask_dropdown_options.push(mask_option)
+                            options_ids[label_value] = mask_option
                         }
                     }
                 }
+
             }
             return mask_dropdown_options
         },
@@ -349,74 +344,65 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
         }
 
         // plot masks for each trace:
-        for(h =0;h<trace_dropdown.length;h++){
-            trace_name = trace_dropdown[h]
-            if(data['traces'][trace_name] != null && data['traces'][trace_name]['masks'] != null){
+        for(trace_name in data['traces']){
+
+            selected_bit_list = []
+            selected_masks_in_trace = []
+            for(mask in selected_masks){
+                if(selected_masks[mask].value.trace == trace_name){
+                    selected_masks_in_trace.push(selected_masks[mask].value)
+                }
+            }
+
+            if(selected_masks_in_trace.length > 0){
+
 
                 mask_color = data['traces'][trace_name].color
                 //mask_color = "rgb(211,211,211)"
-
                 trace_catalog = data['traces'][trace_name]['catalog']
-                if(data['traces'][trace_name]['masks']['and_mask'] != null){
-                    and_mask = data['traces'][trace_name]['masks']['and_mask']
+                and_mask = data['traces'][trace_name]['masks']['and_mask']
+                wavelength_array = data['traces'][trace_name]['x_coords']
 
+                for(mask_bit in and_mask){
+                    mask_bit2 = parseInt(mask_bit)
 
-                    wavelength_array = data['traces'][trace_name]['x_coords']
-
-                    selected_bit_list = []
-                    selected_masks_in_trace = []
-                    for(mask in selected_masks){
-                        if(selected_masks[mask].value.catalog == trace_catalog){
-                            selected_masks_in_trace.push(selected_masks[mask].value)
+                    bits_in_this_region = []
+                    rect_label = ""
+                    for(k=0;k<selected_masks_in_trace.length;k++){
+                        selected_bit = parseInt(selected_masks_in_trace[k].bit)
+                        if( (mask_bit2 & 2**selected_bit) != 0){
+                            bits_in_this_region.push(selected_bit)
+                            //rect_label = rect_label + " " + String(selected_masks_in_trace[k].id)
+                            short_trace_name = String(selected_masks_in_trace[k].trace)
+                            max_name_length = 10
+                            halfname_length = 5
+                            if(short_trace_name.length > max_name_length){
+                                short_trace_name = short_trace_name.substring(0,halfname_length) + "..." + short_trace_name.substring(short_trace_name.length-halfname_length,short_trace_name.length)
+                            }
+                            rect_label = rect_label + short_trace_name + "<br>" + String(selected_masks_in_trace[k].name) + "<br>"
                         }
                     }
-
-                    if(selected_masks_in_trace.length > 0){
-
-                        for(mask_bit in and_mask){
-                            mask_bit2 = parseInt(mask_bit)
-
-                            bits_in_this_region = []
-                            rect_label = ""
-                            for(k=0;k<selected_masks_in_trace.length;k++){
-                                selected_bit = parseInt(selected_masks_in_trace[k].bit)
-                                if( (mask_bit2 & 2**selected_bit) != 0){
-                                    bits_in_this_region.push(selected_bit)
-                                    //rect_label = rect_label + " " + String(selected_masks_in_trace[k].id)
-                                    short_trace_name = String(selected_masks_in_trace[k].trace)
-                                    max_name_length = 10
-                                    halfname_length = 5
-                                    if(short_trace_name.length > max_name_length){
-                                        short_trace_name = short_trace_name.substring(0,halfname_length) + "..." + short_trace_name.substring(short_trace_name.length-halfname_length,short_trace_name.length)
-                                    }
-                                    rect_label = rect_label + short_trace_name + "<br>" + String(selected_masks_in_trace[k].name) + "<br>"
-                                }
-                            }
-                            if(bits_in_this_region.length > 0){
-                                // add masked region
-                                wavelength_indices = and_mask[mask_bit]
-                                for(j=0;j<wavelength_indices.length;j++){
-                                    indices = wavelength_indices[j]
-                                    x0 = wavelength_array[indices[0]]
-                                    x1 = wavelength_array[indices[1]]
-                                    y0 = 0.0
-                                    y1 = 1.0
-                                    if(x0 >= ranges.x_range[0] && x0 <= ranges.x_range[1]){
-                                        rectangle =  {type: 'rect', name:rect_label,  layer:'below', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:0.5, color:"lightgrey"}, opacity:0.20, fillcolor:mask_color}
-                                        shapes.push(rectangle)
-                                        annotation = {showarrow: false, text: rect_label, align: "center", x: (x0+x1)/2.0, xref:'x', xanchor: "center", y: y0, yanchor: "bottom", yref:"paper", font:{size:13, family:"Arial",color:"darkgrey"}, opacity:0.8}
-                                        annotations.push(annotation)
-                                    }
-                                }
-
+                    if(bits_in_this_region.length > 0){
+                        // add masked region
+                        wavelength_indices = and_mask[mask_bit]
+                        for(j=0;j<wavelength_indices.length;j++){
+                            indices = wavelength_indices[j]
+                            x0 = wavelength_array[indices[0]]
+                            x1 = wavelength_array[indices[1]]
+                            y0 = 0.0
+                            y1 = 1.0
+                            if(x0 >= ranges.x_range[0] && x0 <= ranges.x_range[1]){
+                                rectangle =  {type: 'rect', name:rect_label,  layer:'below', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:0.5, color:"lightgrey"}, opacity:0.20, fillcolor:mask_color}
+                                shapes.push(rectangle)
+                                annotation = {showarrow: false, text: rect_label, align: "center", x: (x0+x1)/2.0, xref:'x', xanchor: "center", y: y0, yanchor: "bottom", yref:"paper", font:{size:13, family:"Arial",color:"darkgrey"}, opacity:0.8}
+                                annotations.push(annotation)
                             }
                         }
+
                     }
-
-
-
                 }
             }
+
         }
 
     }

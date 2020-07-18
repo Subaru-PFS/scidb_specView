@@ -177,8 +177,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                 function_name='set_masks_dropdown'
             ),
             Output('dropdown-for-masks', 'options'),
-            [Input('dropdown-for-traces', 'options')],
-            [State('store', 'data')]
+            [Input('store', 'modified_timestamp'),Input('store', 'data')]
         )
 
         app.clientside_callback(

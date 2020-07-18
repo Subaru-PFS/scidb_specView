@@ -23,7 +23,8 @@ object_types = {"PfsObject":"PfsObject", "ZObject":"ZObject","Lam1D":"Lam1D"}
 
 hdu_names = {}
 hdu_names["PfsObject"] = ["PRIMARY", "FLUX", "FLUXTBL", "COVAR", "COVAR2", "MASK", "SKY", "CONFIG"]
-hdu_names["ZObject"] = ["PRIMARY", "COADD", "SPECOBJ", "SPZLINE"]
+#hdu_names["ZObject"] = ["PRIMARY", "COADD", "SPECOBJ", "SPZLINE"]
+hdu_names["ZObject"] = ["PRIMARY", "COADD", None, "SPZLINE"]
 hdu_names["Lam1D"] = ["PRIMARY", "LAMBDA_SCALE", "ZCANDIDATES", "ZPDF", "ZLINES"]
 
 
@@ -33,7 +34,7 @@ def get_object_type(hdulist):
             if len(hdulist) == len(hdu_names[hdu_name]):
                 is_model = True
                 for i in range(len(hdulist)):
-                    if hdulist[i].name.upper() != hdu_names[hdu_name][i].upper():
+                    if  hdu_names[hdu_name][i] is not None and hdulist[i].name.upper() != hdu_names[hdu_name][i].upper():
                         is_model = False
 
                 if is_model:
@@ -72,8 +73,8 @@ sdss_mask_bits_array = [
 ['REDMONSTER', 	28, 'Contiguous region of bad χ2 in sky residuals (with threshhold of relative χ2 > 3).']
 ]
 
-def get_mask_id(catalog, name, bit):
-    return catalog + " " + name + " " + str(bit)
+def get_mask_id(catalog_or_file_name, mask_name, bit):
+    return str(catalog_or_file_name) + " " + str(mask_name) + " " + str(bit)
 
 sdss_mask_bits = { get_mask_id("SDSS",mb[0],mb[1]): {'bit':mb[1], 'catalog':'SDSS', 'name':mb[0], 'description':mb[2]} for mb in sdss_mask_bits_array}
 
@@ -84,9 +85,11 @@ def create_mask(mask_array, wavelength_array):
     mask = {}
     mask_value =  mask_array[0]
     mask[mask_value] = [[0,0]]
+    unique_mask_values = set()
 
     for i in range(1,len(wavelength_array),1):
         new_mask_value = mask_array[i]
+        unique_mask_values.add(int(new_mask_value))
 
         if new_mask_value == mask_value:
             mask[mask_value][-1][1] = i
@@ -100,7 +103,7 @@ def create_mask(mask_array, wavelength_array):
 
             mask_value = new_mask_value
 
-    return mask
+    return mask, unique_mask_values
 
 def get_spectrum_list_from_fits(hdulist, name, add_sky=False, add_model=False, add_error=False, add_masks=False):
 
@@ -131,10 +134,14 @@ def get_spectrum_list_from_fits(hdulist, name, add_sky=False, add_model=False, a
             spectrum.flambda = [f for f in spectrum.flux]
 
         if add_masks:
-            and_mask = create_mask([int(m) for m in c['and_mask']], wavelength)
-            or_mask = create_mask([int(m) for m in c['or_mask']], wavelength)
-            #spectrum.masks = json.dumps({'and_mask': and_mask, 'or_mask': or_mask})
-            spectrum.masks = {'and_mask': and_mask, 'or_mask': or_mask}
+            and_mask, and_mask_values = create_mask([int(m) for m in c['and_mask']], wavelength)
+            or_mask, or_mask_values = create_mask([int(m) for m in c['or_mask']], wavelength)
+
+            and_mask_bits = { bit for (a,bit,c) in sdss_mask_bits_array for mv in and_mask_values if  (mv & 2**bit) != 0 }
+            and_mask_values = {get_mask_id(name, mb[0], mb[1]): {'bit': mb[1], 'catalog': 'SDSS', 'name': mb[0], 'description': mb[2]} for mb in sdss_mask_bits_array if mb[1] in and_mask_bits}
+            or_mask_bits = { bit for (a,bit,c) in sdss_mask_bits_array for mv in or_mask_values if  (mv & 2**bit) != 0 }
+            or_mask_values = {get_mask_id(name, mb[0], mb[1]): {'bit': mb[1], 'catalog': 'SDSS', 'name': mb[0], 'description': mb[2]} for mb in sdss_mask_bits_array if int(mb[1]) in or_mask_bits}
+            spectrum.masks = {'and_mask': and_mask, 'or_mask': or_mask, 'and_mask_values':and_mask_values, 'or_mask_values':or_mask_values}
             spectrum.mask_bits = sdss_mask_bits
         else:
             spectrum.masks = None
