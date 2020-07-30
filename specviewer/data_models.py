@@ -10,6 +10,18 @@ class FittingModels():
 
 fitting_model_types = [FittingModels.GAUSSIAN_PLUS_LINEAR, FittingModels.LORENTZIAN_PLUS_LINEAR, FittingModels.VOIGT_PLUS_LINEAR]
 
+class SmoothingKernels():
+    GAUSSIAN1D = "Gaussian1DKernel"
+    Box1D = "Box1DKernel"
+
+smoothing_kernel_types = [SmoothingKernels.GAUSSIAN1D, SmoothingKernels.Box1D]
+
+class Catalogs():
+    SDSS = "SDSS"
+    PFS = "PFS"
+
+catalog_names = [ Catalogs.SDSS, Catalogs.PFS]
+
 
 class WavelenghUnit:
     ANGSTROM = "angstrom"
@@ -37,7 +49,7 @@ class Trace:
         return str(self.to_dict())
 
 class Spectrum:
-    def __init__(self,name=None, wavelength=None, flux=None, sky=None, model=None, masks=None, mask_bits=None, wavelength_unit=None, flux_unit=None, flambda=None, catalog=None, ancestors=[]):
+    def __init__(self,name=None, wavelength=None, flux=None, sky=None, model=None, masks=None, mask_bits=None, wavelength_unit=None, flux_unit=None, flambda=None, catalog=None, ancestors=[], color="black", linewidth=1, alpha=1):
         self.name = name
         self.wavelength = wavelength
         self.sky = sky
@@ -50,9 +62,13 @@ class Spectrum:
         self.catalog = catalog
         self.ancestors = ancestors
 
+        self.color = color,
+        self.linewidth = linewidth,
+        self.alpha = alpha
+
 
     def to_dict(self):
-        return vars(self)
+        return self.__dict__
 
     def to_string(self):
         return str(self.to_dict())

@@ -196,8 +196,8 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                 html.H1(["Spectrum Viewer"] , className="text-center"),
                 dcc.Graph(
                     id='spec-graph',
-                    figure=self.spec_figure,
-                    # figure=main_figure,
+                    #figure=self.spec_figure,
+                    figure={},
                     config={'displayModeBar': True, 'scrollZoom': True, 'responsive': False, 'displaylogo': False },
                     #animate=True # gives lots of problems
                 ),

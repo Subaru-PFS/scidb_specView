@@ -63,42 +63,45 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
 
             catalogs_list = []
             options_ids = {}
-            for( trace_name in data['traces']){
-                //adding "all" entry:
-                catalog = data['traces'][trace_name].catalog
-                label_all = trace_name + " ALL MASKS"
-                options_for_all_entry = []
-                options_ids = {} // stores the IDs of all masks already added to the mask_dropdown_options, so that there are no duplicates
-                if( data['traces'][trace_name]['masks'] != null && data['traces'][trace_name]['masks']['and_mask_values'] != null){
-                    for(mask_id in data['traces'][trace_name]['masks']['and_mask_values']){
-                        label_value = mask_id
-                        bit = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].bit
-                        catalog = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].catalog
-                        name = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].name
-                        options_for_all_entry.push({label:label_value, value:{id:label_value, trace:trace_name, bit:bit, catalog:catalog, name:name, is_all:false}})
-                    }
-                    if(options_ids[label_all] == null){
-                        val = JSON.stringify({id:label_all, trace:trace_name, bit:null, catalog:catalog, is_all:true, options_for_all_entry:options_for_all_entry})
-                        mask_option = {label:label_all, value:val}
-                        mask_dropdown_options.push(mask_option)
-                        options_ids[label_all] = mask_option
-                    }
+            if(data != null && data['traces'] != null){
 
-                    //adding single mask entries
-                    for(mask_id in data['traces'][trace_name]['masks']['and_mask_values']){
-                        label_value = mask_id
-                        bit = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].bit
-                        catalog = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].catalog
-                        name = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].name
-
-                        if(options_ids[label_value] == null){
-                            mask_option = {label:label_value, value:JSON.stringify({id:mask_id, trace:trace_name, bit:bit, catalog:catalog, name:name, is_all:false})}
+                for( trace_name in data['traces']){
+                    //adding "all" entry:
+                    catalog = data['traces'][trace_name].catalog
+                    label_all = trace_name + " ALL MASKS"
+                    options_for_all_entry = []
+                    options_ids = {} // stores the IDs of all masks already added to the mask_dropdown_options, so that there are no duplicates
+                    if( data['traces'][trace_name]['masks'] != null && data['traces'][trace_name]['masks']['and_mask_values'] != null){
+                        for(mask_id in data['traces'][trace_name]['masks']['and_mask_values']){
+                            label_value = mask_id
+                            bit = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].bit
+                            catalog = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].catalog
+                            name = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].name
+                            options_for_all_entry.push({label:label_value, value:{id:label_value, trace:trace_name, bit:bit, catalog:catalog, name:name, is_all:false}})
+                        }
+                        if(options_ids[label_all] == null){
+                            val = JSON.stringify({id:label_all, trace:trace_name, bit:null, catalog:catalog, is_all:true, options_for_all_entry:options_for_all_entry})
+                            mask_option = {label:label_all, value:val}
                             mask_dropdown_options.push(mask_option)
-                            options_ids[label_value] = mask_option
+                            options_ids[label_all] = mask_option
+                        }
+
+                        //adding single mask entries
+                        for(mask_id in data['traces'][trace_name]['masks']['and_mask_values']){
+                            label_value = mask_id
+                            bit = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].bit
+                            catalog = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].catalog
+                            name = data['traces'][trace_name]['masks']['and_mask_values'][mask_id].name
+
+                            if(options_ids[label_value] == null){
+                                mask_option = {label:label_value, value:JSON.stringify({id:mask_id, trace:trace_name, bit:bit, catalog:catalog, name:name, is_all:false})}
+                                mask_dropdown_options.push(mask_option)
+                                options_ids[label_value] = mask_option
+                            }
                         }
                     }
-                }
 
+                }
             }
             return mask_dropdown_options
         },

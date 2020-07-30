@@ -237,47 +237,42 @@ def load_callbacks(self): # self is passed as the Viewer class
                     task_name = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
 
                     # get data in local storage:
-
+                    data_dict = data if data is not None else self.build_app_data()
 
                     if task_name == "upload-data" and list_of_contents is not None:
                         add_sky = True if "add_sky" in input_checklist else False
                         add_error = True if "add_error" in input_checklist else False
                         add_model = True if "add_model" in input_checklist else False
                         self.write_info("Start processing uploaded file")
-                        data_dict = self.get_data_dict(data)
                         new_data_list = [
-                            self.parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=flux_unit, add_sky=add_sky, add_model=add_model, add_error=add_error) for c, n, d in
+                            self._parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=flux_unit, add_sky=add_sky, add_model=add_model, add_error=add_error) for c, n, d in
                             zip(list_of_contents, list_of_names, list_of_dates)]
                         # traces = { name:trace for (name,trace) in new_data  }
                         for traces in new_data_list:
                             for trace in traces:
                                 self.set_color_for_new_trace(trace, data_dict)
-                                self.add_trace_to_data(data_dict, trace.get('name'), trace, do_update_client=False)
+                                self._add_trace_to_data(data_dict, trace.get('name'), trace, do_update_client=False)
 
                         self.write_info("End processing uploaded file")
                         #return json.dumps(data_dict)
                         return data_dict
 
                     elif task_name == 'wavelength-unit' or task_name == 'flux-unit':
-                        data_dict = self.get_data_dict(data)
                         self._rescale_axis(data_dict, to_wavelength_unit=wavelength_unit, to_flux_unit=flux_unit)
                         return data_dict
 
                     elif task_name == "remove_trace_button" and len(dropdown_trace_names) > 0:
-                        data_dict = self.get_data_dict(data)
                         also_remove_children = True if len(remove_children_checklist)>0 else False
                         self._remove_traces(dropdown_trace_names, data_dict, do_update_client=False, also_remove_children=also_remove_children)
                         #return json.dumps(data_dict)
                         return data_dict
 
                     elif (task_name == "trace_smooth_button" or task_name == 'trace_smooth_substract_button') and len(dropdown_trace_names)>0 and len(smoothing_kernel_name) > 0:
-                        data_dict = self.get_data_dict(data)
                         do_substract = True if task_name == 'trace_smooth_substract_button' else False
                         self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False, kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),kernel_function=None, do_substract=do_substract)
                         return data_dict
 
                     elif task_name == "trace_unsmooth_button" and len(dropdown_trace_names)>0:
-                        data_dict = self.get_data_dict(data)
                         self._unsmooth_trace(dropdown_trace_names, data_dict, do_update_client=False)
                         return data_dict
 
@@ -285,7 +280,6 @@ def load_callbacks(self): # self is passed as the Viewer class
                         if selected_data is None or selected_data.get('range') is None or len(fitting_models) == 0 \
                            or len(dropdown_trace_names) == 0 or flux_unit == FluxUnit.AB_magnitude:
                             return no_update
-                        data_dict = self.get_data_dict(data)
                         self._fit_model_to_flux(dropdown_trace_names, data_dict, fitting_models, selected_data, do_update_client=False)
                         return data_dict
 
@@ -299,7 +293,6 @@ def load_callbacks(self): # self is passed as the Viewer class
                     track = traceback.format_exc()
                     with open(app_base_directory + "error.txt", "a+") as f:
                         f.write(str(datetime.now()) + " " + track)
-
                     raise Exception(exs)
                     # return no_update
 
@@ -347,6 +340,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                               smoothing_kernel_name,smoothing_kernel_width, input_checklist, fitting_models, remove_children_checklist):
                 try:
                     task_name = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
+                    data_dict = data if data is not None else self.build_app_data()
                     if task_name == "synch_interval":
                         #self.write_info(
                         #    "Interval check: ENTER with timestamps " + str(None) + " " + str(self.app_data_timestamp['timestamp']) if data_timestamp is None else "Interval check: ENTER with timestamps " + str(data_timestamp / 1000) + " " + str(
@@ -355,7 +349,6 @@ def load_callbacks(self): # self is passed as the Viewer class
                         # bring new data from global app_data to local data
                         if data_timestamp is None or data_timestamp/1000 < self.app_data_timestamp['timestamp']:
                             self.write_info("Interval check: START synchronizing appdata into datadict")
-                            data_dict = self.get_data_dict(data)
                             self.synch_data(base_data_dict=self.app_data, incomplete_data_dict=data_dict, do_update_client=False)
                             self.write_info("Interval check: EXIT synch. Traces in datadict: " + str([trace for trace in data_dict['traces']]) + ", Traces in appdata: " + str([trace for trace in self.app_data['traces']]))
                             return data_dict
@@ -370,17 +363,16 @@ def load_callbacks(self): # self is passed as the Viewer class
                         add_error = True if "add_error" in input_checklist else False
                         add_model = True if "add_model" in input_checklist else False
 
-                        data_dict = self.get_data_dict(data)
                         new_data_list = [
-                            self.parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=flux_unit, add_sky=add_sky, add_model=add_model, add_error=add_error) for c, n, d in
+                            self._parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=flux_unit, add_sky=add_sky, add_model=add_model, add_error=add_error) for c, n, d in
                             zip(list_of_contents, list_of_names, list_of_dates)]
                         #traces = { name:trace for (name,trace) in new_data }
                         for traces in new_data_list:
                             for trace in traces:
                                 self.write_info("Upload data button: adding trace " + trace.get('name') + " to datadict")
                                 self.set_color_for_new_trace(trace, data_dict)
-                                self.add_trace_to_data(data_dict, trace.get('name'), trace, do_update_client=False)
-                                self.add_trace_to_data(self.app_data, trace.get('name'), trace, do_update_client=False)
+                                self._add_trace_to_data(data_dict, trace.get('name'), trace, do_update_client=False)
+                                self._add_trace_to_data(self.app_data, trace.get('name'), trace, do_update_client=False)
 
                         self.write_info("Upload data button: ended upload. Traces in datadict: " + str(
                             [trace for trace in data_dict['traces']]) + ", Traces in appdata: " + str(
@@ -396,7 +388,6 @@ def load_callbacks(self): # self is passed as the Viewer class
 
                     elif task_name == "remove_trace_button" and len(dropdown_trace_names) > 0:
                         self.write_info("Remove data button: remove of " + str(dropdown_trace_names))
-                        data_dict = self.get_data_dict(data)
                         also_remove_children = True if len(remove_children_checklist) > 0 else False
                         self.write_info("Remove data button: Initial Traces in datadict: " + str(
                             [trace for trace in data_dict['traces']]) + ", Initial Traces in appdate: " + str(
@@ -409,7 +400,6 @@ def load_callbacks(self): # self is passed as the Viewer class
                         return data_dict
 
                     elif (task_name == "trace_smooth_button" or task_name == 'trace_smooth_substract_button') and len(dropdown_trace_names)>0 and len(smoothing_kernel_name) > 0:
-                        data_dict = self.get_data_dict(data)
                         do_substract = True if task_name == 'trace_smooth_substract_button' else False
                         self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False,
                                            kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),
@@ -420,7 +410,6 @@ def load_callbacks(self): # self is passed as the Viewer class
                         return data_dict
 
                     elif task_name == "trace_unsmooth_button" and len(dropdown_trace_names)>0:
-                        data_dict = self.get_data_dict(data)
                         self._unsmooth_trace(dropdown_trace_names, data_dict, do_update_client=False)
                         self._unsmooth_trace(dropdown_trace_names, self.app_data, do_update_client=False)
                         return data_dict
@@ -429,7 +418,6 @@ def load_callbacks(self): # self is passed as the Viewer class
                         if selected_data is None or selected_data.get('range') is None or len(fitting_models) == 0 \
                            or len(dropdown_trace_names) == 0 or flux_unit == FluxUnit.AB_magnitude:
                             return no_update
-                        data_dict = self.get_data_dict(data)
                         self._fit_model_to_flux(dropdown_trace_names, self.app_data, fitting_models, selected_data, do_update_client=False)
                         self._fit_model_to_flux(dropdown_trace_names, data_dict, fitting_models, selected_data, do_update_client=False)
 
@@ -440,7 +428,6 @@ def load_callbacks(self): # self is passed as the Viewer class
                         return data_dict
 
                     elif task_name == "spec-graph":
-                        data_dict = self.get_data_dict(data)
                         data_dict['selection'] = selected_data
                         self.app_data['selection'] = selected_data
                         return data_dict

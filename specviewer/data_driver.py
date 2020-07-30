@@ -17,7 +17,7 @@ import numpy as np
 import os
 from .flux import fnu_to_flambda
 import json
-from .data_models import Trace, Spectrum
+from .data_models import Trace, Spectrum, Catalogs
 
 object_types = {"PfsObject":"PfsObject", "ZObject":"ZObject","Lam1D":"Lam1D"}
 
@@ -122,7 +122,8 @@ def get_spectrum_list_from_fits(hdulist, name, add_sky=False, add_model=False, a
         # to be serialized as json, and numpy objects cannot be automatically serialized as such.
 
         spectrum = Spectrum()
-        spectrum.catalog = "SDSS"
+        spectrum.catalog = Catalogs.SDSS
+        spectrum.ancestors = []
         spectrum.name = name
         wavelength = [float(10**lam) for lam in c['loglam']]
         spectrum.wavelength = wavelength
@@ -151,39 +152,39 @@ def get_spectrum_list_from_fits(hdulist, name, add_sky=False, add_model=False, a
 
         if add_sky:
             spectrum_sky = Spectrum()
-            spectrum.catalog = "SDSS"
+            spectrum.catalog = Catalogs.SDSS
             spectrum_sky.name = name + "_sky"
             spectrum_sky.wavelength = wavelength
             spectrum_sky.flux = [1.0*10**-17*float(x) for x in c['sky']]
             spectrum_sky.wavelength_unit = WavelenghUnit.ANGSTROM
             spectrum_sky.flux_unit = FluxUnit.F_lambda
-            spectrum_sky.ancestors.append(name)
+            spectrum_sky.ancestors = [name]
             if np.sum(np.asarray(spectrum_sky.flux) <= 0, axis=0):
                 spectrum_sky.flambda = [f for f in spectrum_sky.flux]
 
             spectrum_list.append(spectrum_sky)
         if add_error:
             spectrum_error = Spectrum()
-            spectrum_error.catalog = "SDSS"
+            spectrum_error.catalog = Catalogs.SDSS
             spectrum_error.name = name + "_error"
             spectrum_error.wavelength = wavelength
             spectrum_error.flux = [1.0*10**-17*np.sqrt(float(1.0/x)) for x in c['ivar']]
             spectrum_error.wavelength_unit = WavelenghUnit.ANGSTROM
             spectrum_error.flux_unit = FluxUnit.F_lambda
-            spectrum_error.ancestors.append(name)
+            spectrum_error.ancestors = [name]
             if np.sum(np.asarray(spectrum_sky.flux) <= 0, axis=0):
                 spectrum_sky.flambda = [f for f in spectrum_sky.flux]
 
             spectrum_list.append(spectrum_error)
         if add_model:
             spectrum_model = Spectrum()
-            spectrum_model.catalog = "SDSS"
+            spectrum_model.catalog = Catalogs.SDSS
             spectrum_model.name = name + "_model"
             spectrum_model.wavelength = wavelength
             spectrum_model.flux = [1.0*10**-17*float(x) for x in c['model']]
             spectrum_model.wavelength_unit = WavelenghUnit.ANGSTROM
             spectrum_model.flux_unit = FluxUnit.F_lambda
-            spectrum_model.ancestors.append(name)
+            spectrum_model.ancestors = [name]
             if np.sum(np.asarray(spectrum_model.flux) <= 0, axis=0):
                 spectrum_model.flambda = [f for f in spectrum_model.flux]
 
@@ -197,7 +198,7 @@ def get_spectrum_list_from_fits(hdulist, name, add_sky=False, add_model=False, a
         c=hdulist[coaddData].data
         spectrum = Spectrum()
         spectrum.name = name
-        spectrum.catalog = "PFS"
+        spectrum.catalog = Catalogs.PFS
         spectrum.wavelength = [10.0*float(x) for x  in c['lambda']]
         # converted from Jy to Flambda
         spectrum.flux = [fnu_to_flambda(fnu*10**-23, spectrum.wavelength[i], WavelenghUnit.ANGSTROM) for (i, fnu) in
