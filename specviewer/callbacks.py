@@ -1,19 +1,10 @@
 import json
-from textwrap import dedent as d
-from jupyterlab_dash import AppViewer
 import dash
-import dash_core_components as dcc
-import dash_html_components as html
-from dash.dependencies import Input, Output
-from specviewer import app, refresh_time, app_base_directory
-from specviewer.data_models import WavelenghUnit, FluxUnit
+from specviewer import app, app_base_directory
+from .models.enum_models import FluxUnit, SpectrumType
 from datetime import datetime
-import time
 from dash import no_update
-import dash_core_components as dcc
-import dash_html_components as html
 from dash.dependencies import Output, Input, State, ClientsideFunction
-from dash.exceptions import PreventUpdate
 import traceback
 
 def load_callbacks(self): # self is passed as the Viewer class
@@ -153,6 +144,7 @@ def load_callbacks(self): # self is passed as the Viewer class
              Input('redshift-slider', 'value'),Input('spectral_lines_dropdown', 'value'),
              Input('and_mask_switch', 'on'),
              Input('dropdown-for-masks', 'value'),
+             Input('show_error_button', 'n_clicks'),
             ],
             [State('store', 'data'),
              State('spectral_lines_dict','value'),
@@ -197,7 +189,7 @@ def load_callbacks(self): # self is passed as the Viewer class
             ),
             Output('dropdown-for-traces', 'value'),
             [Input("select_all_traces_button", "n_clicks")],
-            [State('store', 'data')]
+            [State('store', 'data'),State('dropdown-for-traces', 'value')]
         )
 
         if self.as_website:
@@ -213,6 +205,8 @@ def load_callbacks(self): # self is passed as the Viewer class
                  Input('wavelength-unit', 'value'),
                  Input('flux-unit', 'value'),
                  Input('model_fit_button', 'n_clicks'),
+                 Input('show_model_button', 'n_clicks'),
+                 Input('show_sky_button', 'n_clicks'),
                 ],
                 [State('upload-data', 'filename'),
                  State('upload-data', 'last_modified'),
@@ -221,16 +215,15 @@ def load_callbacks(self): # self is passed as the Viewer class
                  State('dropdown-for-traces', 'value'),
                  State('smoothing_kernels_dropdown', 'value'),
                  State('kernel_width_box', 'value'),
-                 State('input-options-checklist', 'value'),
                  State('fitting-model-dropdown', 'value'),
                  State('spec-graph', 'selectedData'),
                  State('remove_children_checklist', 'value'),
                  ])
             # def process_input(n_intervals, list_of_contents, list_of_names, list_of_dates, data, dropdown_values):
             def process_input(n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button,n_clicks_smooth_substract_button,
-                              n_clicks_unsmooth_button, wavelength_unit, flux_unit, n_clicks_model_fit_button,
+                              n_clicks_unsmooth_button, wavelength_unit, flux_unit, n_clicks_model_fit_button, show_model_button,show_sky_button,
                               list_of_names, list_of_dates, data, data_timestamp, dropdown_trace_names,
-                              smoothing_kernel_name, smoothing_kernel_width, input_checklist, fitting_models, selected_data, remove_children_checklist):
+                              smoothing_kernel_name, smoothing_kernel_width, fitting_models, selected_data, remove_children_checklist):
                 try:
 
                     # self.debug_data['process_uploaded_file'] = "process_uploaded_file"
@@ -240,12 +233,9 @@ def load_callbacks(self): # self is passed as the Viewer class
                     data_dict = data if data is not None else self.build_app_data()
 
                     if task_name == "upload-data" and list_of_contents is not None:
-                        add_sky = True if "add_sky" in input_checklist else False
-                        add_error = True if "add_error" in input_checklist else False
-                        add_model = True if "add_model" in input_checklist else False
                         self.write_info("Start processing uploaded file")
                         new_data_list = [
-                            self._parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=flux_unit, add_sky=add_sky, add_model=add_model, add_error=add_error) for c, n, d in
+                            self._parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=flux_unit) for c, n, d in
                             zip(list_of_contents, list_of_names, list_of_dates)]
                         # traces = { name:trace for (name,trace) in new_data  }
                         for traces in new_data_list:
@@ -269,7 +259,7 @@ def load_callbacks(self): # self is passed as the Viewer class
 
                     elif (task_name == "trace_smooth_button" or task_name == 'trace_smooth_substract_button') and len(dropdown_trace_names)>0 and len(smoothing_kernel_name) > 0:
                         do_substract = True if task_name == 'trace_smooth_substract_button' else False
-                        self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False, kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),kernel_function=None, do_substract=do_substract)
+                        self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False, kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width), do_substract=do_substract)
                         return data_dict
 
                     elif task_name == "trace_unsmooth_button" and len(dropdown_trace_names)>0:
@@ -282,7 +272,18 @@ def load_callbacks(self): # self is passed as the Viewer class
                             return no_update
                         self._fit_model_to_flux(dropdown_trace_names, data_dict, fitting_models, selected_data, do_update_client=False)
                         return data_dict
-
+                    elif task_name == "show_model_button":
+                        if len(dropdown_trace_names)>0:
+                            self._toggle_derived_traces(SpectrumType.MODEL, dropdown_trace_names, data_dict, do_update_client=False)
+                            return data_dict
+                        else:
+                            return no_update
+                    elif task_name == "show_sky_button":
+                      if len(dropdown_trace_names)>0:
+                            self._toggle_derived_traces(SpectrumType.SKY, dropdown_trace_names, data_dict, do_update_client=False)
+                            return data_dict
+                      else:
+                          return no_update
                     else:
                         return no_update
 
@@ -320,6 +321,8 @@ def load_callbacks(self): # self is passed as the Viewer class
                  Input('wavelength-unit', 'value'),
                  Input('flux-unit', 'value'),
                  Input('model_fit_button', 'n_clicks'),
+                 Input('show_model_button', 'n_clicks'),
+                 Input('show_sky_button', 'n_clicks'),
                  Input('spec-graph', 'selectedData'),
                  ],
                 [State('upload-data', 'filename'),
@@ -329,15 +332,14 @@ def load_callbacks(self): # self is passed as the Viewer class
                  State('dropdown-for-traces', 'value'),
                  State('smoothing_kernels_dropdown', 'value'),
                  State('kernel_width_box', 'value'),
-                 State('input-options-checklist', 'value'),
                  State('fitting-model-dropdown', 'value'),
                  State('remove_children_checklist', 'value'),
                  ])
             #def process_input(n_intervals, list_of_contents, list_of_names, list_of_dates, data, dropdown_values):
             def process_input(n_intervals, n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button, n_clicks_smooth_substract_button,
-                              n_clicks_unsmooth_button, wavelength_unit, flux_unit, n_clicks_model_fit_button,selected_data,
+                              n_clicks_unsmooth_button, wavelength_unit, flux_unit, n_clicks_model_fit_button, show_model_button,show_sky_button, selected_data,
                               list_of_names,list_of_dates, data, data_timestamp, dropdown_trace_names,
-                              smoothing_kernel_name,smoothing_kernel_width, input_checklist, fitting_models, remove_children_checklist):
+                              smoothing_kernel_name,smoothing_kernel_width, fitting_models, remove_children_checklist):
                 try:
                     task_name = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
                     data_dict = data if data is not None else self.build_app_data()
@@ -359,12 +361,8 @@ def load_callbacks(self): # self is passed as the Viewer class
 
                     elif task_name == "upload-data" and list_of_contents is not None:
                         self.write_info("Upload data button: start upload")
-                        add_sky = True if "add_sky" in input_checklist else False
-                        add_error = True if "add_error" in input_checklist else False
-                        add_model = True if "add_model" in input_checklist else False
-
                         new_data_list = [
-                            self._parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=flux_unit, add_sky=add_sky, add_model=add_model, add_error=add_error) for c, n, d in
+                            self._parse_uploaded_file(c, n, wavelength_unit=wavelength_unit, flux_unit=flux_unit) for c, n, d in
                             zip(list_of_contents, list_of_names, list_of_dates)]
                         #traces = { name:trace for (name,trace) in new_data }
                         for traces in new_data_list:
@@ -403,10 +401,10 @@ def load_callbacks(self): # self is passed as the Viewer class
                         do_substract = True if task_name == 'trace_smooth_substract_button' else False
                         self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False,
                                            kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),
-                                           kernel_function=None, do_substract=do_substract)
+                                           do_substract=do_substract)
                         self._smooth_trace(dropdown_trace_names, self.app_data, do_update_client=False,
                                            kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),
-                                           kernel_function=None, do_substract=do_substract)
+                                           do_substract=do_substract)
                         return data_dict
 
                     elif task_name == "trace_unsmooth_button" and len(dropdown_trace_names)>0:
@@ -427,6 +425,18 @@ def load_callbacks(self): # self is passed as the Viewer class
 
                         return data_dict
 
+                    elif task_name == "show_model_button":
+                        if len(dropdown_trace_names)>0:
+                            self._toggle_derived_traces(SpectrumType.MODEL, dropdown_trace_names, data_dict, do_update_client=False)
+                            return data_dict
+                        else:
+                            return no_update
+                    elif task_name == "show_sky_button":
+                        if len(dropdown_trace_names)>0:
+                            self._toggle_derived_traces(SpectrumType.SKY, dropdown_trace_names, data_dict, do_update_client=False)
+                            return data_dict
+                        else:
+                            return no_update
                     elif task_name == "spec-graph":
                         data_dict['selection'] = selected_data
                         self.app_data['selection'] = selected_data

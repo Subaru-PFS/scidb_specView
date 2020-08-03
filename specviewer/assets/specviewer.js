@@ -1,6 +1,7 @@
 //alert("dedW")
 var spectral_lines = null
-
+var nclick_show_error_button = 0
+var do_show_error = false
 window.PlotlyConfig = {MathJaxConfig: 'local'}
 
 
@@ -13,7 +14,9 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                 trace_names = Object.keys(data.traces)
                 for(i=0; i<trace_names.length; i++){
                     trace_name = trace_names[i]
-                    options.push({label: trace_name, value: trace_name})
+                    if(data.traces[trace_name].is_visible){
+                        options.push({label: trace_name, value: trace_name})
+                    }
                 }
             }
             return options
@@ -38,20 +41,21 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                     tab += "<tr><td>Wavelength unit:</td><td>" + fitted_model['wavelength_unit'] + "</td></tr>"
                     tab += "<tr><td>Flux unit:</td><td>" + fitted_model['flux_unit'] + "</td></tr>"
 
-
                 }
                 tab += "</table>"
                 return tab
             }
         },
 
-        select_all_traces_in_dropdown : function(select_all_traces_button_clicks, data) {
+        select_all_traces_in_dropdown : function(select_all_traces_button_clicks, data, traces_dropdown) {
             options = []
             if(data != null){
                 trace_names = Object.keys(data.traces)
-                for(i=0; i<trace_names.length; i++){
-                    trace_name = trace_names[i]
-                    options.push(trace_name)
+                if(traces_dropdown.length != trace_names.length){
+                    for(i=0; i<trace_names.length; i++){
+                        trace_name = trace_names[i]
+                        options.push(trace_name)
+                    }
                 }
             }
             return options
@@ -106,8 +110,17 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
             return mask_dropdown_options
         },
 
-        set_figure: function(modified_timestamp, spectral_lines_switch, redshift, spectral_lines_dropdown, and_mask_switch, mask_dropdown, data, spectral_lines_dict, trace_dropdown) {
-            figure_data = build_figure_data(data, spectral_lines_switch, redshift, spectral_lines_dropdown, spectral_lines_dict)
+        set_figure: function(modified_timestamp, spectral_lines_switch, redshift, spectral_lines_dropdown, and_mask_switch, mask_dropdown, show_error_button_nclicks, data, spectral_lines_dict, trace_dropdown) {
+
+            if(show_error_button_nclicks > nclick_show_error_button){
+                nclick_show_error_button = show_error_button_nclicks
+                if(do_show_error == true)
+                    do_show_error=false
+                else
+                    do_show_error=true
+            }
+
+            figure_data = build_figure_data(data, spectral_lines_switch, redshift, spectral_lines_dropdown, spectral_lines_dict, trace_dropdown, do_show_error)
             //x_range = get_x_range(data)
             figure_layout = build_figure_layout(data, spectral_lines_switch=spectral_lines_switch, redshift, spectral_lines_dropdown, spectral_lines_dict, and_mask_switch, mask_dropdown, trace_dropdown)
             //console.log(JSON.stringify(figure_layout.xaxis))
@@ -134,10 +147,10 @@ function get_data_ranges(data){
         y_max = Number.MIN_VALUE
         for(i=0; i<trace_names.length; i++){
             trace_name = trace_names[i]
-            x_min = Math.min(x_min, Math.min.apply(Math, data.traces[trace_name].x_coords))
-            x_max = Math.max(x_max, Math.max.apply(Math, data.traces[trace_name].x_coords))
-            y_min = Math.min(y_min, Math.min.apply(Math, data.traces[trace_name].y_coords))
-            y_max = Math.max(y_max, Math.max.apply(Math, data.traces[trace_name].y_coords))
+            x_min = Math.min(x_min, Math.min.apply(Math, data.traces[trace_name].wavelength))
+            x_max = Math.max(x_max, Math.max.apply(Math, data.traces[trace_name].wavelength))
+            y_min = Math.min(y_min, Math.min.apply(Math, data.traces[trace_name].flux))
+            y_max = Math.max(y_max, Math.max.apply(Math, data.traces[trace_name].flux))
         }
         return {x_range:[x_min,x_max], y_range:[y_min,y_max]}
     }
@@ -221,7 +234,7 @@ function get_flux_unit(data){
 
 
 
-function build_figure_data(data, spectral_lines_switch, redshift, spectral_lines_dropdown, spectral_lines_dict){
+function build_figure_data(data, spectral_lines_switch, redshift, spectral_lines_dropdown, spectral_lines_dict, trace_dropdown_names, do_show_error){
 
     traces = []
 
@@ -233,23 +246,95 @@ function build_figure_data(data, spectral_lines_switch, redshift, spectral_lines
         trace_names = Object.keys(data.traces)
         for(i=0; i<trace_names.length; i++){
             trace_name = trace_names[i]
-            //trace_data = data.traces[trace_name]
-            trace = {   name:data.traces[trace_name].name,
-                        x: data.traces[trace_name].x_coords,
-                        y: data.traces[trace_name].y_coords,
+
+            var add_error_bounds = do_show_error & trace_dropdown_names.includes(trace_name) & data.traces[trace_name].flux_error != null & data.traces[trace_name].flux_error.length>0
+            var fill_color = add_alpha_to_rgb(data.traces[trace_name].color,0.2)
+
+            if(add_error_bounds){
+                var flux_lower_bound = []
+                for(j=0;j<data.traces[trace_name].flux.length;j++){
+
+                    if(data.traces[trace_name].flux_unit == "AB_magnitude"){
+                        f = data.traces[trace_name].flambda[j] + data.traces[trace_name].flambda_error[j]
+                        w = data.traces[trace_name].wavelength[j]
+                        w_u = data.traces[trace_name].wavelength_unit
+                        //ab = data.traces[trace_name].flux[j]
+                        ab_bound = flambda_to_abmag(f,w,w_u)
+                        flux_lower_bound.push(ab_bound)
+                    }else{
+                        flux_lower_bound.push(data.traces[trace_name].flux[j] - data.traces[trace_name].flux_error[j])
+                    }
+                }
+
+                lower_error_trace = {   name:trace_name + "_lower_error_bound",
+                                        x: data.traces[trace_name].wavelength,
+                                        y: flux_lower_bound,
+                                        mode: "lines",
+                                        type: 'scattergl',
+                                        xaxis: "x",
+                                        yaxis: "y",
+                                        line:{color:data.traces[trace_name].color, width:1.0},
+                                        showlegend : false,
+                                        hoverinfo:"x+y",
+                                        opacity:0.3,
+                                        fill: "tonexty", fillcolor: fill_color,
+                                    }
+                traces.push(lower_error_trace)
+            }
+
+            trace = {   name:trace_name,
+                        x: data.traces[trace_name].wavelength,
+                        y: data.traces[trace_name].flux,
                         mode: "markers+lines",
                         //type: 'scatter',
                         type: 'scattergl',
-                        visible: data.traces[trace_name].visible,
+                        visible: data.traces[trace_name].is_visible,
                         color: data.traces[trace_name].color,
                         xaxis: "x",
                         yaxis: "y",
-                        marker:{size: 1.0, color:data.traces[trace_name].color},
-                        line:{  color:data.traces[trace_name].color,
-                                width:1.0
-                        }
+                        marker:{size: 1.4, color:data.traces[trace_name].color },
+                        line:{ color:data.traces[trace_name].color, width:1.4 }
             }
+            if(add_error_bounds){
+                //trace['fill'] = "tonexty";trace['fillcolor'] = add_alpha_to_rgb(data.traces[trace_name].color,0.2)
+            }
+
+            if(add_error_bounds){
+                var flux_upper_bound = []
+                for(j=0;j<data.traces[trace_name].flux.length;j++){
+                    if(data.traces[trace_name].flux_unit == "AB_magnitude"){
+                        f = data.traces[trace_name].flambda[j] - data.traces[trace_name].flambda_error[j]
+                        w = data.traces[trace_name].wavelength[j]
+                        w_u = data.traces[trace_name].wavelength_unit
+                        //ab = data.traces[trace_name].flux[j]
+                        ab_bound = flambda_to_abmag(f,w,w_u)
+                        flux_upper_bound.push(ab_bound)
+                    }else{
+                        flux_upper_bound.push(data.traces[trace_name].flux[j] + data.traces[trace_name].flux_error[j])
+                    }
+
+                }
+
+                upper_error_trace = {   name:trace_name + "_upper_error_bound",
+                                        x: data.traces[trace_name].wavelength,
+                                        y: flux_upper_bound,
+                                        mode: "lines",
+                                        type: 'scattergl',
+                                        xaxis: "x",
+                                        yaxis: "y",
+                                        line:{color:data.traces[trace_name].color, width:1.0},
+                                        showlegend : false,
+                                        hoverinfo:"x+y",
+                                        fill: "tonexty", fillcolor: fill_color,
+                                        opacity:0.3
+                }
+                traces.push(upper_error_trace)
+            }
+
+
             traces.push(trace)
+
+
         }
     }
     return traces
@@ -364,7 +449,7 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
                 //mask_color = "rgb(211,211,211)"
                 trace_catalog = data['traces'][trace_name]['catalog']
                 and_mask = data['traces'][trace_name]['masks']['and_mask']
-                wavelength_array = data['traces'][trace_name]['x_coords']
+                wavelength_array = data['traces'][trace_name]['wavelength']
 
                 for(mask_bit in and_mask){
                     mask_bit2 = parseInt(mask_bit)
@@ -397,7 +482,7 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
                             if(x0 >= ranges.x_range[0] && x0 <= ranges.x_range[1]){
                                 rectangle =  {type: 'rect', name:rect_label,  layer:'below', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:0.5, color:"lightgrey"}, opacity:0.20, fillcolor:mask_color}
                                 shapes.push(rectangle)
-                                annotation = {showarrow: false, text: rect_label, align: "center", x: (x0+x1)/2.0, xref:'x', xanchor: "center", y: y0, yanchor: "bottom", yref:"paper", font:{size:13, family:"Arial",color:"darkgrey"}, opacity:0.8}
+                                annotation = {showarrow: false, text: rect_label, align: "center", x: (x0+x1)/2.0, xref:'x', xanchor: "center", y: y0, yanchor: "bottom", yref:"paper", font:{size:13, family:"Arial",color:"black"}, opacity:0.4}
                                 annotations.push(annotation)
                             }
                         }
@@ -458,3 +543,35 @@ function read_spectral_lines_list(){
         }
     }
 }
+
+
+function add_alpha_to_rgb(rgb_string, alpha){
+    var rgb = rgb_string.replace(/[^\d,]/g, '').split(',');
+    return "rgb("+rgb[0]+","+rgb[1]+","+rgb[2]+","+alpha+")"
+
+
+}
+
+
+function fnu_to_abmag(fnu){
+    if(fnu <= 0)
+        return null
+    else
+        return -2.5 * Math.log10(fnu) - 48.60
+}
+
+function flambda_to_fnu(flam, lam, wavelength_unit){
+    if(wavelength_unit == "nanometer")
+        lam = lam * 10.0
+    return (10**-23) * 3.33564095 * (10**4) * (lam**2) * flam
+}
+
+function flambda_to_abmag(flam,lam, wavelength_unit){
+    return fnu_to_abmag(flambda_to_fnu(flam,lam,wavelength_unit))
+}
+
+
+
+
+
+

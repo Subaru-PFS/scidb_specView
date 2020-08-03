@@ -1,23 +1,13 @@
 #load SDSS into workable object
-from astropy.io import fits
 #from py3.SciServer import Authentication, Config
 #from py3.SciServer import CasJobs
-from urllib.parse import urlparse
-import SpectrumViewer.CoaddObj as Coadd
-import SpectrumViewer.ZObj as Z
-import SpectrumViewer.data_models as data_models
 #from spectrumviewer.data_models import Medium, Spectrum, SpectrumLineGrid
-import SpectrumViewer
-from specviewer.data_models import Spectrum, WavelenghUnit, FluxUnit
+from .models import data_models as dm
+from .models import enum_models as em
 #from SpectrumViewer.data_models import *
-import math
-from collections.abc import Iterable
-from collections import OrderedDict
 import numpy as np
-import os
 from .flux import fnu_to_flambda
-import json
-from .data_models import Trace, Spectrum, Catalogs
+from specviewer.models.data_models import Trace, Catalogs
 
 object_types = {"PfsObject":"PfsObject", "ZObject":"ZObject","Lam1D":"Lam1D"}
 
@@ -105,9 +95,9 @@ def create_mask(mask_array, wavelength_array):
 
     return mask, unique_mask_values
 
-def get_spectrum_list_from_fits(hdulist, name, add_sky=False, add_model=False, add_error=False, add_masks=False):
+def get_trace_list_from_fits(hdulist, name):
 
-    spectrum_list = []
+    trace_list = []
 
     object_type = get_object_type(hdulist)
 
@@ -121,96 +111,107 @@ def get_spectrum_list_from_fits(hdulist, name, add_sky=False, add_model=False, a
         #note: alwasys convert data types to native python types, not numpy types. The reason is that everything has
         # to be serialized as json, and numpy objects cannot be automatically serialized as such.
 
-        spectrum = Spectrum()
-        spectrum.catalog = Catalogs.SDSS
-        spectrum.ancestors = []
-        spectrum.name = name
+        # object spectrum
+        trace = Trace()
+        trace.name = name
         wavelength = [float(10**lam) for lam in c['loglam']]
-        spectrum.wavelength = wavelength
-        spectrum.flux = [1.0*10**-17*float(x) for x in c['flux']]
-        spectrum.model = [1.0*10**-17*float(x) for x in c['model']]
-        spectrum.wavelength_unit = WavelenghUnit.ANGSTROM
-        spectrum.flux_unit = FluxUnit.F_lambda
-        if np.sum(np.asarray(spectrum.flux) <= 0, axis=0):
-            spectrum.flambda = [f for f in spectrum.flux]
+        trace.wavelength = wavelength
+        trace.wavelength_unit = dm.WavelenghUnit.ANGSTROM
+        trace.flux = [1.0*10**-17*float(x) for x in c['flux']]
+        trace.flux_error = [1.0*10**-17*np.sqrt(float(1.0/x)) for x in c['ivar']]
+        trace.flux_unit = dm.FluxUnit.F_lambda
+        trace.flambda = [x for x in trace.flux]
+        trace.flambda_error = [x for x in trace.flux_error]
 
-        if add_masks:
-            and_mask, and_mask_values = create_mask([int(m) for m in c['and_mask']], wavelength)
-            or_mask, or_mask_values = create_mask([int(m) for m in c['or_mask']], wavelength)
+        trace.ancestors = []
+        trace.catalog = Catalogs.SDSS
+        trace.spectrum_type = em.SpectrumType.OBJECT
+        trace.is_visible = True
 
-            and_mask_bits = { bit for (a,bit,c) in sdss_mask_bits_array for mv in and_mask_values if  (mv & 2**bit) != 0 }
-            and_mask_values = {get_mask_id(name, mb[0], mb[1]): {'bit': mb[1], 'catalog': 'SDSS', 'name': mb[0], 'description': mb[2]} for mb in sdss_mask_bits_array if mb[1] in and_mask_bits}
-            or_mask_bits = { bit for (a,bit,c) in sdss_mask_bits_array for mv in or_mask_values if  (mv & 2**bit) != 0 }
-            or_mask_values = {get_mask_id(name, mb[0], mb[1]): {'bit': mb[1], 'catalog': 'SDSS', 'name': mb[0], 'description': mb[2]} for mb in sdss_mask_bits_array if int(mb[1]) in or_mask_bits}
-            spectrum.masks = {'and_mask': and_mask, 'or_mask': or_mask, 'and_mask_values':and_mask_values, 'or_mask_values':or_mask_values}
-            spectrum.mask_bits = sdss_mask_bits
-        else:
-            spectrum.masks = None
+        # masks:
+        and_mask, and_mask_values = create_mask([int(m) for m in c['and_mask']], wavelength)
+        or_mask, or_mask_values = create_mask([int(m) for m in c['or_mask']], wavelength)
 
-        spectrum_list.append(spectrum)
+        and_mask_bits = { bit for (a,bit,c) in sdss_mask_bits_array for mv in and_mask_values if  (mv & 2**bit) != 0 }
+        and_mask_values = {get_mask_id(name, mb[0], mb[1]): {'bit': mb[1], 'catalog': 'SDSS', 'name': mb[0], 'description': mb[2]} for mb in sdss_mask_bits_array if mb[1] in and_mask_bits}
+        or_mask_bits = { bit for (a,bit,c) in sdss_mask_bits_array for mv in or_mask_values if  (mv & 2**bit) != 0 }
+        or_mask_values = {get_mask_id(name, mb[0], mb[1]): {'bit': mb[1], 'catalog': 'SDSS', 'name': mb[0], 'description': mb[2]} for mb in sdss_mask_bits_array if int(mb[1]) in or_mask_bits}
+
+        trace.masks = {'and_mask': and_mask, 'or_mask': or_mask, 'and_mask_values':and_mask_values, 'or_mask_values':or_mask_values}
+        trace.mask_bits = sdss_mask_bits
+
+        trace_list.append(trace)
+
+        # sky spectrum
+        sky_trace = Trace()
+        sky_trace.catalog = Catalogs.SDSS
+        sky_trace.name = name + "_sky"
+        sky_trace.wavelength = wavelength
+        sky_trace.flux = [1.0*10**-17*float(x) for x in c['sky']]
+        sky_trace.wavelength_unit = dm.WavelenghUnit.ANGSTROM
+        sky_trace.flux_unit = dm.FluxUnit.F_lambda
+        sky_trace.ancestors = [name]
+        sky_trace.flambda = [f for f in sky_trace.flux]
+        sky_trace.is_visible = False
+        sky_trace.spectrum_type=em.SpectrumType.SKY
+
+        trace_list.append(sky_trace)
+
+        # flux error
+        error_trace = Trace()
+        error_trace.catalog = Catalogs.SDSS
+        error_trace.name = name + "_error"
+        error_trace.wavelength = wavelength
+        error_trace.flux = [1.0*10**-17*np.sqrt(float(1.0/x)) for x in c['ivar']]
+        error_trace.wavelength_unit = dm.WavelenghUnit.ANGSTROM
+        error_trace.flux_unit = dm.FluxUnit.F_lambda
+        error_trace.ancestors = [name]
+        error_trace.flambda = [f for f in error_trace.flux]
+        error_trace.is_visible = False
+        error_trace.spectrum_type = em.SpectrumType.ERROR
+
+        trace_list.append(error_trace)
+
+        # model trace
+
+        model_trace = Trace()
+        model_trace.catalog = Catalogs.SDSS
+        model_trace.name = name + "_model"
+        model_trace.wavelength = wavelength
+        model_trace.flux = [1.0*10**-17*float(x) for x in c['model']]
+        model_trace.wavelength_unit = dm.WavelenghUnit.ANGSTROM
+        model_trace.flux_unit = dm.FluxUnit.F_lambda
+        model_trace.ancestors = [name]
+        model_trace.flambda = [f for f in model_trace.flux]
+        model_trace.is_visible = False
+        model_trace.spectrum_type=em.SpectrumType.MODEL
+
+        trace_list.append(model_trace)
 
 
-        if add_sky:
-            spectrum_sky = Spectrum()
-            spectrum.catalog = Catalogs.SDSS
-            spectrum_sky.name = name + "_sky"
-            spectrum_sky.wavelength = wavelength
-            spectrum_sky.flux = [1.0*10**-17*float(x) for x in c['sky']]
-            spectrum_sky.wavelength_unit = WavelenghUnit.ANGSTROM
-            spectrum_sky.flux_unit = FluxUnit.F_lambda
-            spectrum_sky.ancestors = [name]
-            if np.sum(np.asarray(spectrum_sky.flux) <= 0, axis=0):
-                spectrum_sky.flambda = [f for f in spectrum_sky.flux]
-
-            spectrum_list.append(spectrum_sky)
-        if add_error:
-            spectrum_error = Spectrum()
-            spectrum_error.catalog = Catalogs.SDSS
-            spectrum_error.name = name + "_error"
-            spectrum_error.wavelength = wavelength
-            spectrum_error.flux = [1.0*10**-17*np.sqrt(float(1.0/x)) for x in c['ivar']]
-            spectrum_error.wavelength_unit = WavelenghUnit.ANGSTROM
-            spectrum_error.flux_unit = FluxUnit.F_lambda
-            spectrum_error.ancestors = [name]
-            if np.sum(np.asarray(spectrum_sky.flux) <= 0, axis=0):
-                spectrum_sky.flambda = [f for f in spectrum_sky.flux]
-
-            spectrum_list.append(spectrum_error)
-        if add_model:
-            spectrum_model = Spectrum()
-            spectrum_model.catalog = Catalogs.SDSS
-            spectrum_model.name = name + "_model"
-            spectrum_model.wavelength = wavelength
-            spectrum_model.flux = [1.0*10**-17*float(x) for x in c['model']]
-            spectrum_model.wavelength_unit = WavelenghUnit.ANGSTROM
-            spectrum_model.flux_unit = FluxUnit.F_lambda
-            spectrum_model.ancestors = [name]
-            if np.sum(np.asarray(spectrum_model.flux) <= 0, axis=0):
-                spectrum_model.flambda = [f for f in spectrum_model.flux]
-
-            spectrum_list.append(spectrum_model)
-
-
-        return spectrum_list
+        return trace_list
 
     elif object_type == object_types["PfsObject"]:
         coaddData =2 # the index of Coadd data in the HDU list
         c=hdulist[coaddData].data
-        spectrum = Spectrum()
-        spectrum.name = name
-        spectrum.catalog = Catalogs.PFS
-        spectrum.wavelength = [10.0*float(x) for x  in c['lambda']]
+
+        # add object spectrum
+        trace = Trace()
+        trace.name = name
+        trace.catalog = Catalogs.PFS
+        trace.wavelength = [10.0*float(x) for x  in c['lambda']]
         # converted from Jy to Flambda
-        spectrum.flux = [fnu_to_flambda(fnu*10**-23, spectrum.wavelength[i], WavelenghUnit.ANGSTROM) for (i, fnu) in
+        trace.flux = [fnu_to_flambda(fnu*10**-23, trace.wavelength[i], dm.WavelenghUnit.ANGSTROM) for (i, fnu) in
                              enumerate(c['flux'])]
 
-        spectrum.wavelength_unit = WavelenghUnit.ANGSTROM
-        spectrum.flux_unit = FluxUnit.F_lambda
-        if np.sum(np.asarray(spectrum.flux) <= 0, axis=0):
-            spectrum.flambda = [f for f in spectrum.flux]
+        trace.wavelength_unit = dm.WavelenghUnit.ANGSTROM
+        trace.flux_unit = dm.FluxUnit.F_lambda
+        trace.flambda = [f for f in trace.flux]
+        trace.is_visible= True
+        trace.spectrum_type = em.SpectrumType.OBJECT
 
-        spectrum_list.append(spectrum)
-        return spectrum_list
+        trace_list.append(trace)
+        return trace_list
 
     elif object_type == object_types["Lam1D"]:
 
@@ -220,14 +221,17 @@ def get_spectrum_list_from_fits(hdulist, name, add_sky=False, add_model=False, a
         l=hdulist[coaddData].data
 
         for ind in range(len(c['MODELFLUX'])):
-            spectrum = Spectrum()
-            spectrum.name = name + "_" + str(ind)
-            spectrum.wavelength = [10.0*float(x) for x in l['WAVELENGTH']]
+            trace = Trace()
+            trace.name = name + "_" + str(ind)
+            trace.wavelength = [10.0*float(x) for x in l['WAVELENGTH']]
             # adding flux
-            spectrum.flux = [0.0 for s in range(len(l['WAVELENGTH']))]
-            spectrum_list.append(spectrum)
+            trace.flux = [0.0 for s in range(len(l['WAVELENGTH']))]
+            trace.flambda = [0.0 for s in range(len(l['WAVELENGTH']))]
+            trace.spectrum_type = em.SpectrumType.OBJECT
+            trace_list.append(trace)
 
-        return spectrum_list
+
+        return trace_list
 
     else:
         raise Exception("Unknown data model for input file.")

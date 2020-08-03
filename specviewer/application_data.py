@@ -1,20 +1,4 @@
-import SpectrumViewer.specModel as M
-import SpectrumViewer.specView as V
-from SpectrumViewer import spectral_lines_info
-import SpectrumViewer.dataDriver as driver
-from SpectrumViewer.data_models import Medium, Spectrum, SpectrumLineGrid, SpectrumLine
-import SpectrumViewer
 from collections import OrderedDict
-import matplotlib.text
-import numpy as np
-import matplotlib.transforms as transforms
-import copy
-from . import controller as c
-import json
-import datetime
-
-from . import data_models
-
 
 
 class ApplicationData:

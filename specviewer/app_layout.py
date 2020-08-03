@@ -1,17 +1,18 @@
 from specviewer import refresh_time
-from specviewer.data_models import WavelenghUnit, FluxUnit
+from specviewer.models.data_models import WavelenghUnit, FluxUnit
 import dash_core_components as dcc
 import dash_daq as daq
 import dash_html_components as html
 from textwrap import dedent as d
 from specviewer.spectral_lines import spectral_lines
 import json
-from specviewer.data_models import fitting_model_types
+from specviewer.models.enum_models import fitting_models_list, SpectrumType
 
 spectral_line_dropdown_options = []
 spectral_line_dropdown_options.append({'label':'all', 'value':'all'})
 spectral_line_dropdown_options = spectral_line_dropdown_options + [ {'label':spectral_lines[line]['fullname'], 'value':spectral_lines[line]['fullname']} for line in spectral_lines]
-fitting_model_options = [{'label':type, 'value':type} for type in fitting_model_types]
+fitting_model_options = [{'label':type, 'value':type} for type in fitting_models_list]
+
 
 
 styles = {
@@ -51,20 +52,6 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
             html.Div(id="top-panel-div1", className="col-sm-2", style={}, children=[
                 html.H2(["Data Input:"]),
                 html.Br(),
-                html.H5(["also include:"]),
-                dcc.Checklist(
-                    id="input-options-checklist",
-                    options=[
-                        {'label': 'model', 'value': 'add_model'},
-                        {'label': 'sky', 'value': 'add_sky'},
-                        {'label': 'error', 'value': 'add_error'},
-                    ],
-                    value=[],  # 'add_model'
-                    labelStyle={'display': 'inline-block'},
-                    persistence=True,
-                    persistence_type="session",
-                    persisted_props=["value"],
-                ),
                 dcc.Upload(id='upload-data',className="upload", children=html.Div([
                         html.A('Upload file(s)')
                     ]),
@@ -84,7 +71,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                 html.Br(),
                 html.Hr(),
                 html.Br(),
-                html.H2(["Traces:"]),
+                html.H2(["Select Trace(s):"]),
                 dcc.Dropdown(
                     id='dropdown-for-traces',
                     options=[],  # [{'label': label, 'value': label} for label in labels],
@@ -96,7 +83,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     persistence=True,
                     persistence_type="session"
                 ),
-                html.Button("select all", id="select_all_traces_button"),
+                html.Button("(un)select all", id="select_all_traces_button"),
                 html.Br(),
                 html.Button("Remove selected", id="remove_trace_button"),
                 html.Br(),
@@ -113,6 +100,11 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                 ),
 
                 html.Br(),
+                html.H3(["Toggle:"]),
+                html.Button('model', id='show_model_button'),
+                html.Button('sky', id='show_sky_button'),
+                html.Button('error', id='show_error_button'),
+
                 html.Br(),
                 html.H3(["Smoothing:"]),
                 html.Div(className="row", children=[
@@ -211,7 +203,9 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             value=WavelenghUnit.ANGSTROM,
                             placeholder="Wavelength unit",
                             multi=False,
-                            style={}, clearable=False
+                            style={}, clearable=False,
+                            persistence=True,
+                            persistence_type="session",
                         ),
                         html.Br(),
                         html.Br(),
@@ -226,7 +220,9 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             value=FluxUnit.F_lambda,
                             placeholder="Flux unit",
                             multi=False,
-                            style={}, clearable=False
+                            style={}, clearable=False,
+                            persistence=True,
+                            persistence_type="session",
                         ),
                     ]),
                     html.Div(className="col-sm-2", children=[
