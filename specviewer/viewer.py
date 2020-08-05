@@ -1,4 +1,4 @@
-from specviewer import app, app_base_directory
+from specviewer import app, socketio_app, app_base_directory
 
 # from SpectrumViewer.data_models import Medium, Spectrum, SpectrumLineGrid, SpectrumLine
 import numpy as np
@@ -97,6 +97,9 @@ class Viewer():
 
         return self._load_from_hdu(hdulist, file_name, wavelength_unit=wavelength_unit, flux_unit=flux_unit)
 
+    def _send_message(self, message):
+        socketio_app.emit("update",data=message)
+
     def _load_from_hdu(self, hdulist, name, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=FluxUnit.F_lambda):
 
         # assumes that spectrum wavelength units are in Armstrong:
@@ -124,7 +127,12 @@ class Viewer():
         # self.load_callbacks()
         # app.layout = self.load_app_layout
         # app.layout = self.load_app_layout
-        jupyter_viewer.show(app)
+
+        jupyter_viewer.show(app)  # for dash + jupyterlab_dash
+        #jupyter_viewer.show(socketio_app)  # dash + jupyterlab_dash + socketIO
+        #socketio_app.run(app.server) # dash + jupyterdash + socketIO
+        #app.run_server(mode='jupyterlab') # dash + jupyterdash
+        #app.run_server(mode='inline')
 
     def synch_data(self,base_data_dict,incomplete_data_dict,do_update_client=False):
         #self.write_info("inc0  start " + str(incomplete_data_dict) + " " + str(base_data_dict))
@@ -181,8 +189,7 @@ class Viewer():
             name_parts = file_path_parts[-1].split(".")
             name = ".".join(name_parts[:(len(name_parts) - 1)])
 
-        rescaled_traces = self._load_from_hdu(hdulist, name, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=FluxUnit.F_lambda,
-                                                add_sky=add_sky, add_model=add_model, add_error=add_error, add_masks=add_masks)
+        rescaled_traces = self._load_from_hdu(hdulist, name, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=FluxUnit.F_lambda)
         for trace in rescaled_traces:
             self.set_color_for_new_trace(trace, self.app_data)
             self._add_trace_to_data(self.app_data, trace.get('name'), trace, do_update_client=True)
