@@ -50,10 +50,9 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
 
             ## first column --------------------------------------------------------------------------------------------
             html.Div(id="top-panel-div1", className="col-sm-2", style={}, children=[
-                html.H2(["Data Input:"]),
-                html.Br(),
+                html.H5(["Data Input:"]),
                 dcc.Upload(id='upload-data',className="upload", children=html.Div([
-                        html.A('Upload file(s)')
+                        html.H5('Upload file(s)')
                     ]),
                     style={
                         'width': '50%',
@@ -63,15 +62,13 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                         'borderStyle': 'dashed',
                         'borderRadius': '5px',
                         'textAlign': 'center',
-                        'margin': '10px'
+                        'margin': '5px'
                     },
-                    # Allow multiple files to be uploaded
-                    multiple=True
+                    multiple=True # Allow multiple files to be uploaded
                 ),
-                html.Br(),
                 html.Hr(),
                 html.Br(),
-                html.H2(["Select Trace(s):"]),
+                html.H5(["Select Trace(s):"]),
                 dcc.Dropdown(
                     id='dropdown-for-traces',
                     options=[],  # [{'label': label, 'value': label} for label in labels],
@@ -84,7 +81,6 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     persistence_type="session"
                 ),
                 html.Button("(un)select all", id="select_all_traces_button"),
-                html.Br(),
                 html.Button("Remove selected", id="remove_trace_button"),
                 html.Br(),
                 dcc.Checklist(
@@ -100,13 +96,14 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                 ),
 
                 html.Br(),
-                html.H3(["Toggle:"]),
+                html.H5(["Toggle:"]),
                 html.Button('model', id='show_model_button'),
                 html.Button('sky', id='show_sky_button'),
                 html.Button('error', id='show_error_button'),
 
+                html.Hr(),
                 html.Br(),
-                html.H3(["Smoothing:"]),
+                html.H5(["Smoothing:"]),
                 html.Div(className="row", children=[
                     html.Div(className="col-sm-6", children=[
                         html.Span(["Kernel:"]),
@@ -132,31 +129,9 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                 html.Button('Smooth', id='trace_smooth_button'),
                 html.Button('Substract smoothed', id='trace_smooth_substract_button'),
                 html.Button('Reset', id='trace_unsmooth_button'),
-
                 html.Br(),
                 html.Br(),
-                html.H3(["Masks:"]),
-                dcc.Dropdown(
-                    id='dropdown-for-masks',
-                    options=[],  # [{'label': label, 'value': label} for label in labels],
-                    value='',
-                    placeholder="Select masks(s)",
-                    multi=True,
-                    style={},
-                    persistence=True,
-                    persistence_type="session"
-                ),
-                html.Br(),
-                daq.BooleanSwitch(id="and_mask_switch",
-                                  on=False,
-                                  label="Show mask(s)",
-                                  labelPosition="top",
-                                  persistence=True,
-                                  persistence_type="session",
-                ),
-                html.Br(),
-                html.Br(),
-                html.H3(["Model Fitting:"]),
+                html.H5(["Model Fitting:"]),
                 dcc.Dropdown(
                     id='fitting-model-dropdown',
                     options= fitting_model_options,
@@ -185,7 +160,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
             ## next column --------------------------------------------------------------------------------------------
             html.Div(id="top-panel-div2", className="col-sm-10", style={}, children=[
                 html.Br(),
-                html.H1(["Spectrum Viewer"] , className="text-center"),
+                html.H4(["Spectrum Viewer"] , className="text-center"),
                 dcc.Graph(
                     id='spec-graph',
                     #figure=self.spec_figure,
@@ -194,8 +169,9 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     #animate=True # gives lots of problems
                 ),
                 html.Div(className="row",children=[
+                    html.Div(className="col-sm-2", children=[]),
                     html.Div(className="col-sm-2", children=[
-                        html.H3(["Wavelength unit"]),
+                        html.H5(["Wavelength unit"]),
                         dcc.Dropdown(
                             id='wavelength-unit',
                             options=[{'label': "nanometer", 'value': WavelenghUnit.NANOMETER},
@@ -209,7 +185,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                         ),
                         html.Br(),
                         html.Br(),
-                        html.H3(["Flux unit"]),
+                        html.H5(["Flux unit"]),
                         dcc.Dropdown(
                             id='flux-unit',
                             options=[
@@ -227,7 +203,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     ]),
                     html.Div(className="col-sm-2", children=[
                         #https://dash.plotly.com/dash-daq/booleanswitch
-                        html.H3("SpectralLines:"),
+                        html.H5("SpectralLines:"),
                         daq.BooleanSwitch(id="spectral-lines-switch",
                             on=False,
                             label="Show lines",
@@ -248,7 +224,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                         html.Div(dcc.Input(id='spectral_lines_dict', value=json.dumps(spectral_lines), style={'display': 'none'})),
                         html.Br(),
                         html.Br(),
-                        html.H4("Line(s) redshift:"),
+                        html.H6("Line(s) redshift:"),
                         html.Div(dcc.Input(id='redshift_input', value='0', type='number')),
                         html.Button("Set", id="redshift_button"),
                         html.Br(),
@@ -264,8 +240,29 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             step=0.01
                         ),
                     ]),
-                    html.Div(className="col-sm-6", children=[
+                    html.Div(className="col-sm-4", children=[
+                        html.H5(["Masks:"]),
+                        html.Br(),
+                        daq.BooleanSwitch(id="and_mask_switch",
+                                          on=False,
+                                          label="Show mask(s)",
+                                          labelPosition="top",
+                                          persistence=True,
+                                          persistence_type="session",
+                                          ),
+                        html.Br(),
+                        dcc.Dropdown(
+                            id='dropdown-for-masks',
+                            options=[],  # [{'label': label, 'value': label} for label in labels],
+                            value='',
+                            placeholder="Select masks(s)",
+                            multi=True,
+                            style={},
+                            persistence=True,
+                            persistence_type="session"
+                        ),
                     ]),
+                    html.Div(className="col-sm-4", children=[])
                 ]),
 
 

@@ -4,6 +4,13 @@ var nclick_show_error_button = 0
 var do_show_error = false
 window.PlotlyConfig = {MathJaxConfig: 'local'}
 
+/*
+//var socket =  io.connect('http://localhost:8888/proxy/41901/');
+var socket =  io()
+socket.on("update", function(message) {
+    alert(message)
+})
+*/
 
 window.dash_clientside = Object.assign({}, window.dash_clientside, {
     clientside: {
@@ -32,7 +39,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                     //add properties:
                     tab += "<tr><td>model:</td><td>" + fitted_model.model + "</td></tr>"
                     for(parameter_name in fitted_model['parameters']){
-                        tab += "<tr><td>" +  parameter_name + "</td><td>" + fitted_model['parameters'][parameter_name] + "</td></tr>"
+                        tab += "<tr><td>" +  parameter_name + "</td><td>" + fitted_model['parameters'][parameter_name].toFixed(5) + "</td></tr>"
                     }
                     if(fitted_model['selection_range'] != null){
                         //tab += "<tr><td>  x_range  </td><td>[" + fitted_model['selection_range']['x_range'][0] +  ", " + fitted_model['selection_range']['x_range'][1]  + "]</td></tr>"
@@ -238,9 +245,8 @@ function build_figure_data(data, spectral_lines_switch, redshift, spectral_lines
 
     traces = []
 
-    ranges = get_data_ranges(data)
     wavelength_unit = get_wavelength_unit(data)
-    ranges = get_data_ranges(data)
+    //ranges = get_data_ranges(data)
 
     if(data != null){
         trace_names = Object.keys(data.traces)
@@ -385,7 +391,9 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
             if(wavelength_unit == "nanometer")
                 x0 = x0/10.0
             x1=x0
+            // need to include only lines within the range of data since otherwise the plotted are will be too big compared to the spectra.
             if(x0 >= ranges.x_range[0] && x0 <= ranges.x_range[1]){
+
 
                 if(i % 3 == 0){
                     y_line_annotation = 1.0
@@ -395,8 +403,8 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
                     y_line_annotation = 1.04
                 }
 
-                y0 = ranges.y_range[0] + 0.1*(ranges.y_range[1]-ranges.y_range[0])
-                y1 = ranges.y_range[1] - 0.1*(ranges.y_range[1]-ranges.y_range[0])
+                //y0 = ranges.y_range[0] + 0.1*(ranges.y_range[1]-ranges.y_range[0])
+                //y1 = ranges.y_range[1] - 0.1*(ranges.y_range[1]-ranges.y_range[0])
                 y0=0
                 y1=1
 
@@ -480,9 +488,9 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
                             y0 = 0.0
                             y1 = 1.0
                             if(x0 >= ranges.x_range[0] && x0 <= ranges.x_range[1]){
-                                rectangle =  {type: 'rect', name:rect_label,  layer:'below', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:0.5, color:"lightgrey"}, opacity:0.20, fillcolor:mask_color}
+                                rectangle =  {type: 'rect', name:rect_label,  layer:'below', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:1.0, color:mask_color, opacity:0.2}, opacity:0.2, fillcolor:mask_color}
                                 shapes.push(rectangle)
-                                annotation = {showarrow: false, text: rect_label, align: "center", x: (x0+x1)/2.0, xref:'x', xanchor: "center", y: y0, yanchor: "bottom", yref:"paper", font:{size:13, family:"Arial",color:"black"}, opacity:0.4}
+                                annotation = {showarrow: false, text: rect_label, align: "center", x: (x0+x1)/2.0, xref:'x', xanchor: "center", y: y0, yanchor: "bottom", yref:"paper", font:{size:11, family:"Arial",color:"black"}, opacity:0.4}
                                 annotations.push(annotation)
                             }
                         }
@@ -495,6 +503,12 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
 
     }
 
+    // https://plotly.com/javascript/reference/layout/#layout-legend
+    var legend = {
+        font: { size:10, color:"black", family:"Courier New, monospace"},
+        x:0.90,
+        y:1.2,
+    }
 
     var layout = {
         showlegend: true,
@@ -516,12 +530,13 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
         xaxis: {anchor: "y", title: {text: x_axis_label}, showgrid:false, automargin: true,},
         yaxis: {anchor: "x", title: y_axis_label, showgrid:false, showexponent: 'last', exponentformat: 'power', automargin: true,},
         //xaxis_title:x_axis_label, yaxis_title:y_axis_label,
-        font:{family:"Courier New, monospace", size:18, color:"#7f7f7f"},
+        font:{family:"Courier New, monospace", size:12, color:"black"},
         plot_bgcolor:'rgb(255,255,255)',
         clickmode:'event+select',
         shapes: shapes,
         annotations: annotations,
         uirevision: true,
+        legend: legend,
     }
     return layout
 }
