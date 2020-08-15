@@ -1,7 +1,5 @@
 import flask
 from flask_socketio import SocketIO
-import dash
-from .scocket_dash import SocketDash
 from jupyter_dash import JupyterDash
 
 from specviewer import app_base_directory, external_stylesheets,external_scripts, port
