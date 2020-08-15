@@ -1,13 +1,8 @@
-import flask
-from flask_socketio import SocketIO
-import dash
-from jupyter_dash import JupyterDash
-from config import REFRESH_TIME, APP_BASE_DIRECTORY
+from config import REFRESH_TIME, APP_BASE_DIRECTORY, PORT, DATA_BASE_DIRECTORY
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 
 
-server = flask.Flask(__name__) # define flask app.server
-
+port = PORT
 external_stylesheets = ['https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css']
 external_scripts = ['https://code.jquery.com/jquery-3.5.0.min.js', 'https://cdn.plot.ly/plotly-latest.min.js','https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js','https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML',
                     {
@@ -16,15 +11,17 @@ external_scripts = ['https://code.jquery.com/jquery-3.5.0.min.js', 'https://cdn.
                         "crossorigin": "anonymous",
                     }
                     ]
-
 #server = flask.Flask(__name__) # define flask app.server
 #app = dash.Dash(__name__, external_stylesheets=external_stylesheets, external_scripts=external_scripts, server=server,  requests_pathname_prefix='/specviewer/')
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets, external_scripts=external_scripts, server=server)
-#app = JupyterDash(__name__, external_stylesheets=external_stylesheets, external_scripts=external_scripts, server=server)
+a = """
+server = flask.Flask(__name__) # define flask app.server
+#app = dash.Dash(__name__, external_stylesheets=external_stylesheets, external_scripts=external_scripts, server=server)
+app = JupyterDash(__name__, external_stylesheets=external_stylesheets, external_scripts=external_scripts, server=server)
 app.server.secret_key = 'SOME_KEY_STRING'
-socketio_app = SocketIO(app.server)
-
+#socketio_app = SocketIO(app.server)
+socketio_app = None
+"""
 
 
 
@@ -32,5 +29,5 @@ socketio_app = SocketIO(app.server)
 #app.layout = html.Div([dcc.Interval(id='interval-component',interval=1*1000,n_intervals=0),html.Div(className='row', children=[html.Div(id='live-update-text')])])
 refresh_time = REFRESH_TIME
 app_base_directory = APP_BASE_DIRECTORY
-
+data_base_directory = DATA_BASE_DIRECTORY
 from specviewer.viewer import Viewer

@@ -57,6 +57,7 @@ class Trace(Spectrum):
         self.is_visible = is_visible
         self.show_error = show_error
         self.ancestors = ancestors
+        self.curveNumber = None
 
         def from_spectrum(spectrum, visible = True, ancestors = ancestors):
             for key,value in spectrum.to_dict().items():

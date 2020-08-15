@@ -13,6 +13,11 @@ spectral_line_dropdown_options.append({'label':'all', 'value':'all'})
 spectral_line_dropdown_options = spectral_line_dropdown_options + [ {'label':spectral_lines[line]['fullname'], 'value':spectral_lines[line]['fullname']} for line in spectral_lines]
 fitting_model_options = [{'label':type, 'value':type} for type in fitting_models_list]
 
+# docs:
+# https://dash-bootstrap-components.opensource.faculty.ai/
+# https://github.com/ucg8j/awesome-dash#component-libraries
+# https://pypi.org/project/dash-database/
+# https://github.com/thedirtyfew/dash-extensions/
 
 
 styles = {
@@ -23,34 +28,48 @@ styles = {
 }
 
 
-def load_app_layout(self): # self is passed as the Viewer class to fill out the figure element on the
+def load_app_layout(self, app_port): # self is passed as the Viewer class to fill out the figure element on the
     layout = html.Div([
         # The local store will take the initial data only the first time the page is loaded
         # and keep it until it is cleared.
-        # dcc.Store(id='store', storage_type='local'),
-        dcc.Store(id='store', storage_type='session'),
+        #dcc.Store(id='store', storage_type='memory'),
         # Same as the local store but will lose the data when the browser/tab closes.
-        dcc.Store(id='session-store', storage_type='session'),
+        dcc.Loading(
+            id="loading-1",
+            type="default",
+            children=dcc.Store(id='store', storage_type='memory'),
+            style={'size': 5},
+        ),
+        # stores the URL of the page plus query string
+        dcc.Location(id='url', refresh=False),
         dcc.Interval(
             id='synch_interval',
             interval=1000 * refresh_time,  # refresh time in seconds
             n_intervals=0
         ),
-        dcc.Interval(
-            id='refresh-data-interval',
-            interval=1000 * refresh_time,  # in refresh time in seconds
-            n_intervals=0
-        ),
-        dcc.Interval(
-            id='interval-component',
-            interval=1000 * refresh_time,  # in refresh time in seconds
-            n_intervals=0
-        ),
+        #dcc.Interval(
+        #    id='refresh-data-interval',
+        #    interval=1000 * refresh_time,  # in refresh time in seconds
+        #    n_intervals=0
+        #),
+        #dcc.Interval(
+        #    id='interval-component',
+        #    interval=1000 * refresh_time,  # in refresh time in seconds
+        #    n_intervals=0
+        #),
         html.Div(id="top-panel-div", className="row", style= {}, children=[
 
             ## first column --------------------------------------------------------------------------------------------
             html.Div(id="top-panel-div1", className="col-sm-2", style={}, children=[
-                html.H5(["Data Input:"]),
+                html.H5(["Loading spectra:"]),
+                #https://dash.plotly.com/dash-core-components/input
+                dcc.Input(id="pull_trigger", type="text",value="dwdww", style={'visibility': 'hidden'}),
+                html.Br(),
+                dcc.Input(id="specid", type="text", placeholder="Enter spectrum ID(s)",
+                          debounce=True, autoFocus=True,
+                          persistence="true", persistence_type="memory", value=""),
+                html.Button("load", id="search_spectrum_button"),
+                html.Br(),
                 dcc.Upload(id='upload-data',className="upload", children=html.Div([
                         html.H5('Upload file(s)')
                     ]),
@@ -77,8 +96,8 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     placeholder="Select trace(s)",
                     multi=True,
                     style={},
-                    persistence=True,
-                    persistence_type="session"
+                    persistence="true",
+                    persistence_type="memory"
                 ),
                 html.Button("(un)select all", id="select_all_traces_button"),
                 html.Button("Remove selected", id="remove_trace_button"),
@@ -91,7 +110,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     value=[],  # 'add_model'
                     labelStyle={'display': 'inline-block'},
                     persistence=True,
-                    persistence_type="session",
+                    persistence_type="memory",
                     persisted_props=["value"],
                 ),
 
@@ -116,8 +135,8 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             multi=False,
                             style={},
                             clearable = False,
-                            persistence=True,
-                            persistence_type="session"
+                            #persistence=True,
+                            persistence_type="memory"
                         )
                     ]),
                     html.Div(className="col-md-6", children=[
@@ -140,7 +159,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                     multi=True,
                     style={},
                     persistence=True,
-                    persistence_type="session"
+                    persistence_type="memory"
                 ),
                 html.Br(),
                 html.Button('Fit model(s)', id='model_fit_button'),
@@ -149,7 +168,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                 dcc.Markdown(id = "fitted_models_table", children='', dangerously_allow_html=True),
                 html.Br(),
                 html.Br(),
-                html.Div(dcc.Input(style={'display':'none'}, id='input-box', type='text')),
+                #html.Div(dcc.Input(style={'display':'none'}, id='input-box', type='text', value="")),
                 html.Button('Submit', id='button', style={'display':'none'}),
                 html.Br(),
                 html.Div(id='output-container-button', style={'display':'none'},
@@ -181,7 +200,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             multi=False,
                             style={}, clearable=False,
                             persistence=True,
-                            persistence_type="session",
+                            persistence_type="memory",
                         ),
                         html.Br(),
                         html.Br(),
@@ -198,7 +217,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             multi=False,
                             style={}, clearable=False,
                             persistence=True,
-                            persistence_type="session",
+                            persistence_type="memory",
                         ),
                     ]),
                     html.Div(className="col-sm-2", children=[
@@ -209,7 +228,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             label="Show lines",
                             labelPosition="top",
                             persistence=True,
-                            persistence_type="session",
+                            persistence_type="memory",
                         ),
                         html.Br(),
                         html.Br(),
@@ -248,7 +267,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                                           label="Show mask(s)",
                                           labelPosition="top",
                                           persistence=True,
-                                          persistence_type="session",
+                                          persistence_type="memory",
                                           ),
                         html.Br(),
                         dcc.Dropdown(
@@ -259,7 +278,7 @@ def load_app_layout(self): # self is passed as the Viewer class to fill out the 
                             multi=True,
                             style={},
                             persistence=True,
-                            persistence_type="session"
+                            persistence_type="memory"
                         ),
                     ]),
                     html.Div(className="col-sm-4", children=[])

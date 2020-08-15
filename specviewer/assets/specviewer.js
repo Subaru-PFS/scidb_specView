@@ -1,16 +1,52 @@
 //alert("dedW")
+//sessionStorage.clear()
+
 var spectral_lines = null
 var nclick_show_error_button = 0
 var do_show_error = false
 window.PlotlyConfig = {MathJaxConfig: 'local'}
 
+
+//var socket =  io.connect('http://localhost:8050/');
 /*
-//var socket =  io.connect('http://localhost:8888/proxy/41901/');
 var socket =  io()
-socket.on("update", function(message) {
-    alert(message)
+socket.on("update", function(data) {
+    alert("from websocket")
+    console.log("from websocket")
+    update_clientside_app_data(data)
 })
 */
+
+$(document).ready(function(){
+    var socket = io.connect();
+    socket.on('update', function(msg) {
+        //alert("from socket")
+        update_clientside_app_data()
+    });
+});
+
+
+
+function update_clientside_app_data(data){
+    randval = uuidv4()
+    update_component_porperty("pull_trigger", {value: randval})
+}
+
+function update_component_porperty(id, property){
+    //sessionStorage.setItem("store",data)
+    var element = document.getElementById(id);
+    var key = Object.keys(element).find(key=>key.startsWith("__reactInternalInstance$"));
+    var internalInstance = element[key];
+    var setProps = internalInstance.return.memoizedProps.setProps;
+    setProps(property)
+}
+
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 window.dash_clientside = Object.assign({}, window.dash_clientside, {
     clientside: {
@@ -31,7 +67,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
 
         set_fitted_models_table: function(modified_timestamp, data) {
             if(data != null){
-                var tab = "<table id='fitted_models_table'>"
+                var tab = "<table id='fitted_models_table'><tbody>"
                 for(fitted_model_name in data['fitted_models']){
                     fitted_model = data['fitted_models'][fitted_model_name]
                     // create header:
@@ -39,7 +75,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                     //add properties:
                     tab += "<tr><td>model:</td><td>" + fitted_model.model + "</td></tr>"
                     for(parameter_name in fitted_model['parameters']){
-                        tab += "<tr><td>" +  parameter_name + "</td><td>" + fitted_model['parameters'][parameter_name].toFixed(5) + "</td></tr>"
+                        tab += "<tr><td>" +  parameter_name + "</td><td>" + (fitted_model['parameters'][parameter_name]).toExponential(7) + "</td></tr>"
                     }
                     if(fitted_model['selection_range'] != null){
                         //tab += "<tr><td>  x_range  </td><td>[" + fitted_model['selection_range']['x_range'][0] +  ", " + fitted_model['selection_range']['x_range'][1]  + "]</td></tr>"
@@ -49,7 +85,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                     tab += "<tr><td>Flux unit:</td><td>" + fitted_model['flux_unit'] + "</td></tr>"
 
                 }
-                tab += "</table>"
+                tab += "</tbody></table>"
                 return tab
             }
         },
