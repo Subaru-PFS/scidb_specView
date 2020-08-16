@@ -447,7 +447,7 @@ class Viewer():
 
 
     def _fit_model_to_flux(self, trace_names, application_data, fitting_models, selected_data, custom_model=None,
-                           custom_fitter=None, do_update_client=True, include_fit_substaced_trace=False):
+                           custom_fitter=None, do_update_client=True, include_fit_substracted_trace=False):
         # http://learn.astropy.org/rst-tutorials/User-Defined-Model.html
         # https://docs.astropy.org/en/stable/modeling/new-model.html
         # https://docs.astropy.org/en/stable/modeling/index.html
@@ -486,11 +486,14 @@ class Viewer():
 
                 else:
                     fitting_model_name = str(custom_model)
-                    fitted_model = custom_fitter(custom_model, x, y)
+                    fitter = custom_fitter
+                    fitted_model = fitter(custom_model, x, y)
+
 
                 x_grid = np.linspace(min_x, max_x, 5*len(x))
                 y_grid = fitted_model(x_grid)
 
+                parameter_errors =  np.sqrt(np.diag(fitter.fit_info['param_cov'])) if fitter.fit_info['param_cov'] is not None else None
 
                 fitted_trace_name = "fit" + str(len(application_data['fitted_models']) + 1) + "_" + trace_name
                 ancestors = trace['ancestors'] + [trace_name]
@@ -503,7 +506,7 @@ class Viewer():
                 self._set_color_for_new_trace(fitted_trace, application_data)
                 self._add_trace_to_data(application_data, fitted_trace_name, fitted_trace, False)
 
-                if include_fit_substaced_trace:
+                if include_fit_substracted_trace:
                     fitted_trace_name = "fit_substr_" + str(len(application_data['fitted_models']) + 1) + "_" + trace_name
                     ancestors = trace['ancestors'] + [trace_name]
 
@@ -530,6 +533,7 @@ class Viewer():
                 fitted_info['ancestors'] = ancestors
                 fitted_info['model'] = fitting_model_name
                 fitted_info['parameters'] = {x:y for (x,y) in zip(fitted_model.param_names, fitted_model.parameters)}
+                fitted_info['parameter_errors'] = {x: y for (x, y) in zip(fitted_model.param_names, parameter_errors) } if parameter_errors is not None else None
                 fitted_info['selection_indexes'] = ind
                 fitted_info['wavelength_unit'] = trace['wavelength_unit']
                 fitted_info['flux_unit'] = trace['flux_unit']

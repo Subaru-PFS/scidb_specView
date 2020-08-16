@@ -87,7 +87,14 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                     //add properties:
                     tab += "<tr><td>model:</td><td>" + fitted_model.model + "</td></tr>"
                     for(parameter_name in fitted_model['parameters']){
-                        tab += "<tr><td>" +  parameter_name + "</td><td>" + (fitted_model['parameters'][parameter_name]).toExponential(7) + "</td></tr>"
+                        parameter_value = (fitted_model['parameters'][parameter_name]).toExponential(7)
+                        tab += "<tr><td>" +  parameter_name + "</td><td>" + parameter_value + "</td></tr>"
+                        if( fitted_model['parameter_errors'] != null){
+                            parameter_error = (fitted_model['parameter_errors'][parameter_name]).toExponential(7)
+                            tab += "<tr><td> 	&plusmn;  </td><td>" + parameter_error + "</td></tr>"
+                        }
+
+
                     }
                     if(fitted_model['selection_range'] != null){
                         //tab += "<tr><td>  x_range  </td><td>[" + fitted_model['selection_range']['x_range'][0] +  ", " + fitted_model['selection_range']['x_range'][1]  + "]</td></tr>"
