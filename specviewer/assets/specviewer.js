@@ -65,6 +65,18 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
             return options
         },
 
+        set_smoothing_kernels_dropdown: function(modified_timestamp, data){
+            options = []
+            if(data != null){
+                smoothing_kernels = data['smoothing_kernels']
+                for(i=0; i<smoothing_kernels.length; i++){
+                    kernel_name = smoothing_kernels[i]
+                    options.push({label: kernel_name, value: kernel_name})
+                }
+            }
+            return options
+        },
+
         set_fitted_models_table: function(modified_timestamp, data) {
             if(data != null){
                 var tab = "<table id='fitted_models_table'><tbody>"

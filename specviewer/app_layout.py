@@ -7,11 +7,13 @@ from textwrap import dedent as d
 from specviewer.spectral_lines import spectral_lines
 import json
 from specviewer.models.enum_models import fitting_models_list, SpectrumType
+from specviewer.smoothing.smoother import default_smoothing_kernels
 
 spectral_line_dropdown_options = []
 spectral_line_dropdown_options.append({'label':'all', 'value':'all'})
 spectral_line_dropdown_options = spectral_line_dropdown_options + [ {'label':spectral_lines[line]['fullname'], 'value':spectral_lines[line]['fullname']} for line in spectral_lines]
 fitting_model_options = [{'label':type, 'value':type} for type in fitting_models_list]
+smoothing_kernel_options = [{'label':type, 'value':type} for type in default_smoothing_kernels]
 
 # docs:
 # https://dash-bootstrap-components.opensource.faculty.ai/
@@ -128,8 +130,9 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                         html.Span(["Kernel:"]),
                         dcc.Dropdown(
                             id='smoothing_kernels_dropdown',
-                            options=[{'label': "Gaussian", 'value': "Gaussian1DKernel"},
-                                     {'label': "Box", 'value': "Box1DKernel"}],
+                            #options=[{'label': "Gaussian", 'value': "Gaussian1DKernel"},
+                            #         {'label': "Box", 'value': "Box1DKernel"}],
+                            options = smoothing_kernel_options,
                             value='Gaussian1DKernel',
                             placeholder="Select Smoothing kernel",
                             multi=False,

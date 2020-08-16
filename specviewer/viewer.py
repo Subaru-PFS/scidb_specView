@@ -23,6 +23,7 @@ from specviewer.colors import get_next_color
 import specviewer.flux as fl
 from astropy.modeling import models, fitting
 from specviewer.utilities import get_specid_list, get_unused_port
+from .smoothing.smoother import Smoother, default_smoothing_kernels
 process_manager = multiprocessing.Manager()
 styles = {
     'pre': {
@@ -43,7 +44,7 @@ styles = {
 class Viewer():
     # app_data = {}
 
-    APP_DATA_KEYS = ["traces", "fitted_models", "selection"]
+    APP_DATA_KEYS = ["traces", "fitted_models", "selection", "smoothing_kernels"]
 
     def __init__(self, as_website=False):
         # global app_data
@@ -67,11 +68,15 @@ class Viewer():
         for key,value in self.build_app_data().items():
             self.app_data[key] = value
 
+        # setting the default values, which also show in the UI dropdown.
+
         #self.app_data['traces'] = {}
         #self.app_data['fitted_models'] = {}
         #self.app_data['selection'] = {}
         self.app_data_timestamp['timestamp'] = 0
         self.debug_data = process_manager.dict()
+
+        self.smoother = Smoother()
 
         # self.spectral_lines_info = spectral_lines_info
         # self.view = V.SpecView(width, height, dpi)
@@ -96,7 +101,7 @@ class Viewer():
             #jupyter_viewer.show(app)  # for dash + jupyterlab_dash
             #app.run_server(mode='inline')  # dash + jupyterdash
             #app.run_server(mode='jupyterlab', port=port, debug=True, dev_tools_ui=True,dev_tools_props_check=True,dev_tools_hot_reload=True, inline_exceptions=True, dev_tools_silence_routes_logging=False) # dash + jupyterdash
-            self.app.run_server(mode='jupyterlab', port=self.app_port, debug=True, dev_tools_ui=True,dev_tools_props_check=True,dev_tools_hot_reload=True,dev_tools_silence_routes_logging=True)  # dash + jupyterdash
+            self.app.run_server(mode='jupyterlab', port=self.app_port, debug=debug, dev_tools_ui=True,dev_tools_props_check=True,dev_tools_hot_reload=True,dev_tools_silence_routes_logging=True)  # dash + jupyterdash
             #jupyter_viewer.show(socketio_app)  # dash + jupyterlab_dash + socketIO
             #self.socketio_app.run(app.server) # dash + jupyterdash + socketIO
 
@@ -105,6 +110,9 @@ class Viewer():
         d = {}
         for key in Viewer.APP_DATA_KEYS:
             d[key] = {}
+
+        # initialize smoothing kernels with the list of default names
+        d["smoothing_kernels"] = default_smoothing_kernels
         return d
 
     def _parse_uploaded_file(self, contents, file_name, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=FluxUnit.F_lambda):
@@ -306,7 +314,38 @@ class Viewer():
             self.update_client()
 
 
-    def _smooth_trace(self, trace_names, application_data, do_update_client=True, kernel=SmoothingKernels.GAUSSIAN1D, kernel_width=21, custom_kernel_array=None, custom_kernel_function=None, function_array_size=21, do_substract=False):
+    def _smooth_trace(self, trace_names, application_data, smoother, do_update_client=True, do_substract=False):
+        for trace_name in trace_names:
+            if trace_name in application_data['traces']:
+                traces = application_data['traces']
+                trace = traces[trace_name]
+
+                flux = fl.convert_flux(flux=trace['flambda'], wavelength=trace['wavelength'],from_flux_unit=FluxUnit.F_lambda,to_flux_unit=trace.get('flux_unit'), to_wavelength_unit=trace.get('wavelength_unit'))
+
+                smoothed_flux = smoother.get_smoothed_flux(flux)
+
+                if do_substract:
+                    smoothed_flux = flux - smoothed_flux
+                trace['flux'] = smoothed_flux
+
+                #remove old trace and replace it with new trace containing smoothed data
+                traces[trace_name] = trace
+                application_data['traces'] = traces
+
+                # if kernel is custom, add it to the data dict:
+                current_smoothing_kernels = application_data['smoothing_kernels']
+                if smoother.kernel_func_type not in current_smoothing_kernels:
+                    current_smoothing_kernels.append(smoother.kernel_func_type)
+                application_data['smoothing_kernels'] = current_smoothing_kernels
+
+        if do_update_client:
+            self.update_client()
+
+
+
+
+
+    def _smooth_trace2(self, trace_names, application_data, do_update_client=True, kernel=SmoothingKernels.GAUSSIAN1D, kernel_width=21, custom_kernel_array=None, custom_kernel_function=None, function_array_size=21, do_substract=False):
         # https://specutils.readthedocs.io/en/stable/manipulation.html
         # https://docs.astropy.org/en/stable/convolution/kernels.html
 
@@ -316,12 +355,21 @@ class Viewer():
         # https://keflavich-astropy.readthedocs.io/en/latest/modeling/new.html
         # https://docs.astropy.org/en/stable/modeling/reference_api.html#module-astropy.modeling
 
+        if self.as_website:
+            smoother = Smoother()
+            smoother.set_smoother(kernel, kernel_width, custom_kernel_array, custom_kernel_function,
+                                  function_array_size)
+        else:
+            smoother = self.smoother
+            smoother.set_smoother(kernel, kernel_width, custom_kernel_array, custom_kernel_function,
+                                  function_array_size)
 
         for trace_name in trace_names:
             if trace_name in application_data['traces']:
                 traces = application_data['traces']
                 trace = traces[trace_name]
 
+                a = """
                 if custom_kernel_array is None and custom_kernel_function is None:
                     if kernel == SmoothingKernels.GAUSSIAN1D:
                         kernel_func = Gaussian1DKernel(int(kernel_width))
@@ -340,17 +388,26 @@ class Viewer():
 
                 else:
                     raise Exception("Problem choosing smoothing kernel")
+                """
 
                 flux = fl.convert_flux(flux=trace['flambda'], wavelength=trace['wavelength'],from_flux_unit=FluxUnit.F_lambda,to_flux_unit=trace.get('flux_unit'), to_wavelength_unit=trace.get('wavelength_unit'))
-                smoothed_flux = convolve(flux, kernel_func)
+                #smoothed_flux = convolve(flux, kernel_func)
+
+                smoothed_flux = smoother.get_smoothed_flux(flux)
+
                 if do_substract:
                     smoothed_flux = flux - smoothed_flux
                 trace['flux'] = smoothed_flux
 
                 #remove old trace and replace it with new trace containing smoothed data
-                #traces.pop(trace_name)
                 traces[trace_name] = trace
                 application_data['traces'] = traces
+
+                # if kernel is custom, add it to the data dict:
+                current_smoothing_kernels = application_data['smoothing_kernels']
+                if smoother.kernel_func_type not in current_smoothing_kernels:
+                    current_smoothing_kernels.append(smoother.kernel_func_type)
+                application_data['smoothing_kernels'] = current_smoothing_kernels
 
         if do_update_client:
             self.update_client()
@@ -499,9 +556,13 @@ class Viewer():
         self._unsmooth_trace([trace_name], self.app_data, do_update_client=True)
 
 
+    def set_smoothing_kernel(self,kernel=SmoothingKernels.GAUSSIAN1D, kernel_width=20, custom_kernel_array=None, custom_kernel_function=None, function_array_size=21):
+        self.smoother.set_smoothing_kernel(kernel, kernel_width, custom_kernel_array, custom_kernel_function, function_array_size)
 
-    def smooth_trace(self, trace_name, kernel=SmoothingKernels.GAUSSIAN1D, kernel_width=20, custom_kernel_array=None, custom_kernel_function=None, function_array_size=21, do_substract=False):
-        self._smooth_trace([trace_name], self.app_data, do_update_client=True, kernel=kernel, kernel_width=kernel_width, custom_kernel_array=custom_kernel_array, custom_kernel_function=custom_kernel_function, function_array_size=function_array_size, do_substract=do_substract)
+
+    def smooth_trace(self, trace_name, do_substract=False):
+        self._smooth_trace([trace_name], self.app_data, self.smoother, do_update_client=True, do_substract=do_substract)
+        #self._smooth_trace([trace_name], self.app_data, do_update_client=True, kernel=kernel, kernel_width=kernel_width, custom_kernel_array=custom_kernel_array, custom_kernel_function=custom_kernel_function, function_array_size=function_array_size, do_substract=do_substract)
 
 
     def fit_model(self, trace_name, fitting_model=FittingModels.GAUSSIAN_PLUS_LINEAR, selected_data=None, custom_model=None):

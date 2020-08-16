@@ -6,6 +6,7 @@ from datetime import datetime
 from dash import no_update
 from dash.dependencies import Output, Input, State, ClientsideFunction
 import traceback
+from specviewer.smoothing.smoother import Smoother, SmoothingKernels, default_smoothing_kernels
 
 def load_callbacks(self): # self is passed as the Viewer class
 
@@ -173,6 +174,16 @@ def load_callbacks(self): # self is passed as the Viewer class
         self.app.clientside_callback(
             ClientsideFunction(
                 namespace='clientside',
+                function_name='set_smoothing_kernels_dropdown'
+            ),
+            Output('smoothing_kernels_dropdown', 'options'),
+            [Input('store', 'modified_timestamp'),Input('store', 'data')],
+            #[State('store', 'data')]
+        )
+
+        self.app.clientside_callback(
+            ClientsideFunction(
+                namespace='clientside',
                 function_name='set_masks_dropdown'
             ),
             Output('dropdown-for-masks', 'options'),
@@ -269,7 +280,11 @@ def load_callbacks(self): # self is passed as the Viewer class
 
                     elif (task_name == "trace_smooth_button" or task_name == 'trace_smooth_substract_button') and len(dropdown_trace_names)>0 and len(smoothing_kernel_name) > 0:
                         do_substract = True if task_name == 'trace_smooth_substract_button' else False
-                        self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False, kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width), do_substract=do_substract)
+
+                        smoother = Smoother()
+                        smoother.set_smoothing_kernel(kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width))
+                        self._smooth_trace(dropdown_trace_names, data_dict, smoother, do_update_client=False, do_substract=do_substract)
+                        #self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False, kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width), do_substract=do_substract)
                         return data_dict
 
                     elif task_name == "trace_unsmooth_button" and len(dropdown_trace_names)>0:
@@ -295,13 +310,11 @@ def load_callbacks(self): # self is passed as the Viewer class
                         else:
                           return no_update
                     elif task_name == "url":
-                        print(url_search_string)
                         specid= "dedW"
                         if url_search_string is not None and url_search_string != "":
                             self._load_from_specid(specid, wavelength_unit, flux_unit, data_dict)
-                            return data_dict
-                        else:
-                            return no_update
+
+                        return data_dict
 
                     elif task_name == "search_spectrum_button":
                         if len(specid) > 0:
@@ -453,9 +466,15 @@ def load_callbacks(self): # self is passed as the Viewer class
                         #self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False,
                         #                   kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),
                         #                   do_substract=do_substract)
-                        self._smooth_trace(dropdown_trace_names, self.app_data, do_update_client=False,
-                                           kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),
-                                           do_substract=do_substract)
+
+                        if smoothing_kernel_name in default_smoothing_kernels:
+                            smoother = Smoother()
+                            smoother.set_smoothing_kernel(kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width))
+                        else: # use smoother defined by user:
+                            smoother = self.smoother
+
+                        self._smooth_trace(dropdown_trace_names, self.app_data, smoother, do_update_client=False, do_substract=do_substract)
+                        #self._smooth_trace(dropdown_trace_names, self.app_data, do_update_client=False,kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),do_substract=do_substract)
                         self._synch_data(self.app_data, data_dict, do_update_client=False)
                         return data_dict
 
