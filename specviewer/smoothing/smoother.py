@@ -27,19 +27,11 @@ class Smoother():
         self.kernel_func=Gaussian1DKernel(int(5))
         self.kernel_func_type=SmoothingKernels.GAUSSIAN1D
 
-    def set_smoothing_kernel(self, kernel=SmoothingKernels.GAUSSIAN1D, kernel_width=21, custom_kernel_array=None, custom_kernel_function=None, function_array_size=21):
+    def set_smoothing_kernel(self, kernel=None, kernel_width=None, custom_array_kernel=None, custom_kernel_function=None, function_array_size=21):
         #if custom_kernel_array is None and custom_kernel_function is None:
-        if kernel in default_smoothing_kernels:
-            if kernel == SmoothingKernels.GAUSSIAN1D:
-                self.kernel_func = Gaussian1DKernel(int(kernel_width))
-                self.kernel_func_type = SmoothingKernels.GAUSSIAN1D
-            elif kernel == SmoothingKernels.Box1D:
-                self.kernel_func = Box1DKernel(int(kernel_width))
-                self.kernel_func_type = SmoothingKernels.Box1D
-            else:
-                raise Exception("Unsupported smoothing kernel " + str(kernel))
-        elif custom_kernel_array is not None:
-            custom_kernel_array = np.array([i for i in custom_kernel_array])
+
+        if custom_array_kernel is not None:
+            custom_kernel_array = np.array([i for i in custom_array_kernel])
             self.kernel_func = CustomKernel(custom_kernel_array)
             self.kernel_func_type = SmoothingKernels.CUSTOM
 
@@ -48,6 +40,16 @@ class Smoother():
                 raise Exception("custom_kernel_function must be an instance of astropy.modeling.Fittable1DModel")
             self.kernel_func = Model1DKernel(custom_kernel_function, x_size=function_array_size)
             self.kernel_func_type = SmoothingKernels.CUSTOM
+
+        elif kernel in default_smoothing_kernels:
+            if kernel == SmoothingKernels.GAUSSIAN1D:
+                self.kernel_func = Gaussian1DKernel(int(kernel_width))
+                self.kernel_func_type = SmoothingKernels.GAUSSIAN1D
+            elif kernel == SmoothingKernels.Box1D:
+                self.kernel_func = Box1DKernel(int(kernel_width))
+                self.kernel_func_type = SmoothingKernels.Box1D
+            else:
+                raise Exception("Unsupported smoothing kernel " + str(kernel))
 
         else:
             raise Exception("Problem while setting the smoothing kernel")

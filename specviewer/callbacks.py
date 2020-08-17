@@ -184,6 +184,15 @@ def load_callbacks(self): # self is passed as the Viewer class
         self.app.clientside_callback(
             ClientsideFunction(
                 namespace='clientside',
+                function_name='set_fitting_models_dropdown'
+            ),
+            Output('fitting-model-dropdown', 'options'),
+            [Input('store', 'modified_timestamp'),Input('store', 'data')],
+        )
+
+        self.app.clientside_callback(
+            ClientsideFunction(
+                namespace='clientside',
                 function_name='set_masks_dropdown'
             ),
             Output('dropdown-for-masks', 'options'),
@@ -281,8 +290,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                     elif (task_name == "trace_smooth_button" or task_name == 'trace_smooth_substract_button') and len(dropdown_trace_names)>0 and len(smoothing_kernel_name) > 0:
                         do_substract = True if task_name == 'trace_smooth_substract_button' else False
 
-                        smoother = Smoother()
-                        smoother.set_smoothing_kernel(kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width))
+                        smoother = self._get_smoother(smoothing_kernel_name, smoothing_kernel_width)
                         self._smooth_trace(dropdown_trace_names, data_dict, smoother, do_update_client=False, do_substract=do_substract)
                         #self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False, kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width), do_substract=do_substract)
                         return data_dict
@@ -295,7 +303,9 @@ def load_callbacks(self): # self is passed as the Viewer class
                         if selected_data is None or len(fitting_models) == 0 \
                            or len(dropdown_trace_names) == 0 or flux_unit == FluxUnit.AB_magnitude:
                             return no_update
-                        self._fit_model_to_flux(dropdown_trace_names, data_dict, fitting_models, selected_data, do_update_client=False)
+                        #self._fit_model_to_flux(dropdown_trace_names, data_dict, fitting_models, selected_data, do_update_client=False)
+                        model_fitters = [ self._get_model_fitter(trace_name, data_dict, fitting_model, selected_data) for trace_name in dropdown_trace_names for fitting_model in fitting_models]
+                        _ = self._fit_model_to_flux(dropdown_trace_names, data_dict, model_fitters, selected_data, do_update_client=False)
                         return data_dict
                     elif task_name == "show_model_button":
                         if len(dropdown_trace_names)>0:
@@ -331,6 +341,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                     # self.debug_data['error'] = str(e) + " " + traceback.format_exc()
                     exs = str(e)
                     track = traceback.format_exc()
+                    print(track)
                     with open(app_base_directory + "error.txt", "a+") as f:
                         f.write(str(datetime.now()) + " " + track)
                     raise Exception(exs)
@@ -467,12 +478,8 @@ def load_callbacks(self): # self is passed as the Viewer class
                         #                   kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),
                         #                   do_substract=do_substract)
 
-                        if smoothing_kernel_name in default_smoothing_kernels:
-                            smoother = Smoother()
-                            smoother.set_smoothing_kernel(kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width))
-                        else: # use smoother defined by user:
-                            smoother = self.smoother
 
+                        smoother = self._get_smoother(smoothing_kernel_name, smoothing_kernel_width)
                         self._smooth_trace(dropdown_trace_names, self.app_data, smoother, do_update_client=False, do_substract=do_substract)
                         #self._smooth_trace(dropdown_trace_names, self.app_data, do_update_client=False,kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),do_substract=do_substract)
                         self._synch_data(self.app_data, data_dict, do_update_client=False)
@@ -491,9 +498,11 @@ def load_callbacks(self): # self is passed as the Viewer class
                             self.write_info("End fitting model: no update")
                             return no_update
 
+                        #self._fit_model_to_flux(dropdown_trace_names, self.app_data, fitting_models, selected_data, do_update_client=False)
 
-                        self._fit_model_to_flux(dropdown_trace_names, self.app_data, fitting_models, selected_data, do_update_client=False)
-                        #self._fit_model_to_flux(dropdown_trace_names, data_dict, fitting_models, selected_data, do_update_client=False)
+                        model_fitters = [self._get_model_fitter(trace_name, self.app_data, fitting_model, selected_data) for trace_name in dropdown_trace_names for fitting_model in fitting_models]
+                        _ = self._fit_model_to_flux(dropdown_trace_names, self.app_data, model_fitters, selected_data, do_update_client=False)
+
                         self._synch_data(self.app_data, data_dict, do_update_client=False)
                         self.write_info("End fitting model . Traces in datadict: " + str(
                             [trace for trace in data_dict['traces']]) + ", Traces in appdata: " + str(

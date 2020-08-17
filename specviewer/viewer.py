@@ -16,14 +16,16 @@ import io
 from astropy.io import fits
 from astropy.convolution import convolve, Gaussian1DKernel, Box1DKernel, CustomKernel
 from astropy.convolution.kernels import Model1DKernel
-from .models.enum_models import WavelenghUnit, FluxUnit, FittingModels, SmoothingKernels, SpectrumType
-from .models.data_models import Trace
+from .models.enum_models import WavelenghUnit, FluxUnit, SpectrumType
+from .models.data_models import Trace, Spectrum
 from astropy.modeling import Fittable1DModel
 from specviewer.colors import get_next_color
 import specviewer.flux as fl
 from astropy.modeling import models, fitting
 from specviewer.utilities import get_specid_list, get_unused_port
-from .smoothing.smoother import Smoother, default_smoothing_kernels
+from .smoothing.smoother import Smoother, default_smoothing_kernels, SmoothingKernels
+from .fitting.fitter import ModelFitter, default_fitting_models, FittingModels
+
 process_manager = multiprocessing.Manager()
 styles = {
     'pre': {
@@ -44,7 +46,7 @@ styles = {
 class Viewer():
     # app_data = {}
 
-    APP_DATA_KEYS = ["traces", "fitted_models", "selection", "smoothing_kernels"]
+    APP_DATA_KEYS = ["traces", "fitted_models", "selection", "smoothing_kernel_types", "fitting_model_types"]
 
     def __init__(self, as_website=False):
         # global app_data
@@ -77,6 +79,7 @@ class Viewer():
         self.debug_data = process_manager.dict()
 
         self.smoother = Smoother()
+        self.model_fitter = ModelFitter()
 
         # self.spectral_lines_info = spectral_lines_info
         # self.view = V.SpecView(width, height, dpi)
@@ -107,13 +110,14 @@ class Viewer():
 
     @staticmethod
     def build_app_data():
-        d = {}
+        app_data = {}
         for key in Viewer.APP_DATA_KEYS:
-            d[key] = {}
+            app_data[key] = {}
 
         # initialize smoothing kernels with the list of default names
-        d["smoothing_kernels"] = default_smoothing_kernels
-        return d
+        app_data["smoothing_kernel_types"] = default_smoothing_kernels
+        app_data['fitting_model_types'] = default_fitting_models
+        return app_data
 
     def _parse_uploaded_file(self, contents, file_name, wavelength_unit=WavelenghUnit.ANGSTROM, flux_unit=FluxUnit.F_lambda):
 
@@ -313,6 +317,13 @@ class Viewer():
         if do_update_client:
             self.update_client()
 
+    def _get_smoother(self, smoothing_kernel, kernel_width):
+        if smoothing_kernel in default_smoothing_kernels:
+            smoother = Smoother()
+            smoother.set_smoothing_kernel(kernel=smoothing_kernel, kernel_width=int(kernel_width))
+        else:  # use smoother defined by user:
+            smoother = self.smoother
+        return smoother
 
     def _smooth_trace(self, trace_names, application_data, smoother, do_update_client=True, do_substract=False):
         for trace_name in trace_names:
@@ -333,84 +344,17 @@ class Viewer():
                 application_data['traces'] = traces
 
                 # if kernel is custom, add it to the data dict:
-                current_smoothing_kernels = application_data['smoothing_kernels']
+                current_smoothing_kernels = application_data['smoothing_kernel_types']
+                self.write_info("current_smoothing_kernels1: "+str(current_smoothing_kernels))
                 if smoother.kernel_func_type not in current_smoothing_kernels:
                     current_smoothing_kernels.append(smoother.kernel_func_type)
-                application_data['smoothing_kernels'] = current_smoothing_kernels
+                self.write_info("current_smoothing_kernels2: " + str(current_smoothing_kernels))
+                application_data['smoothing_kernel_types'] = current_smoothing_kernels
+                self.write_info("application_data['smoothing_kernel_types']: " + str(application_data['smoothing_kernel_types']))
 
         if do_update_client:
             self.update_client()
 
-
-
-
-
-    def _smooth_trace2(self, trace_names, application_data, do_update_client=True, kernel=SmoothingKernels.GAUSSIAN1D, kernel_width=21, custom_kernel_array=None, custom_kernel_function=None, function_array_size=21, do_substract=False):
-        # https://specutils.readthedocs.io/en/stable/manipulation.html
-        # https://docs.astropy.org/en/stable/convolution/kernels.html
-
-        # https://docs.astropy.org/en/stable/convolution/kernels.html
-        # https://het.as.utexas.edu/HET/Software/Astropy-0.4.2/convolution/kernels.html
-        # http://learn.astropy.org/rst-tutorials/User-Defined-Model.html
-        # https://keflavich-astropy.readthedocs.io/en/latest/modeling/new.html
-        # https://docs.astropy.org/en/stable/modeling/reference_api.html#module-astropy.modeling
-
-        if self.as_website:
-            smoother = Smoother()
-            smoother.set_smoother(kernel, kernel_width, custom_kernel_array, custom_kernel_function,
-                                  function_array_size)
-        else:
-            smoother = self.smoother
-            smoother.set_smoother(kernel, kernel_width, custom_kernel_array, custom_kernel_function,
-                                  function_array_size)
-
-        for trace_name in trace_names:
-            if trace_name in application_data['traces']:
-                traces = application_data['traces']
-                trace = traces[trace_name]
-
-                a = """
-                if custom_kernel_array is None and custom_kernel_function is None:
-                    if kernel == SmoothingKernels.GAUSSIAN1D:
-                        kernel_func = Gaussian1DKernel(int(kernel_width))
-                    elif kernel == SmoothingKernels.Box1D:
-                        kernel_func = Box1DKernel(int(kernel_width))
-                    else:
-                        raise Exception("Unsupported smoothing kernel " + str(kernel))
-                elif custom_kernel_array is not None:
-                    custom_kernel_array =  np.array([i for i in custom_kernel_array])
-                    kernel_func = CustomKernel(custom_kernel_array)
-
-                elif custom_kernel_function is not None:
-                    if not isinstance(custom_kernel_function, Fittable1DModel):
-                        raise Exception("custom_kernel_function must be an instance of astropy.modeling.Fittable1DModel")
-                    kernel_func = Model1DKernel(custom_kernel_function, x_size=function_array_size)
-
-                else:
-                    raise Exception("Problem choosing smoothing kernel")
-                """
-
-                flux = fl.convert_flux(flux=trace['flambda'], wavelength=trace['wavelength'],from_flux_unit=FluxUnit.F_lambda,to_flux_unit=trace.get('flux_unit'), to_wavelength_unit=trace.get('wavelength_unit'))
-                #smoothed_flux = convolve(flux, kernel_func)
-
-                smoothed_flux = smoother.get_smoothed_flux(flux)
-
-                if do_substract:
-                    smoothed_flux = flux - smoothed_flux
-                trace['flux'] = smoothed_flux
-
-                #remove old trace and replace it with new trace containing smoothed data
-                traces[trace_name] = trace
-                application_data['traces'] = traces
-
-                # if kernel is custom, add it to the data dict:
-                current_smoothing_kernels = application_data['smoothing_kernels']
-                if smoother.kernel_func_type not in current_smoothing_kernels:
-                    current_smoothing_kernels.append(smoother.kernel_func_type)
-                application_data['smoothing_kernels'] = current_smoothing_kernels
-
-        if do_update_client:
-            self.update_client()
 
     def _rescale_axis(self, application_data, to_wavelength_unit=WavelenghUnit.ANGSTROM, to_flux_unit=FluxUnit.F_lambda, do_update_client=False):
         traces = application_data['traces']
@@ -446,7 +390,135 @@ class Viewer():
         return trace
 
 
-    def _fit_model_to_flux(self, trace_names, application_data, fitting_models, selected_data, custom_model=None,
+    def _get_model_fitter(self, trace_name, application_data, fitting_model, selected_data):
+
+        #trace = application_data['traces'].get(trace_name)
+
+        x = np.asarray([point['x'] for point in selected_data["points"] if point['curveNumber'] == application_data['traces'][trace_name]["curveNumber"]])
+        y = np.asarray([point['y'] for point in selected_data["points"] if point['curveNumber'] == application_data['traces'][trace_name]["curveNumber"]])
+
+        min_x, max_x = np.min(x), np.max(x)
+
+        if fitting_model in default_fitting_models:
+
+            location_param = np.mean(x)
+            amplitude_param = np.max(np.abs(y))
+            spread_param = (max_x - min_x) / len(x)
+
+            if fitting_model == FittingModels.GAUSSIAN_PLUS_LINEAR:
+                model = models.Gaussian1D(amplitude=amplitude_param, mean=location_param,stddev=spread_param) + models.Polynomial1D(degree=1)
+            elif fitting_model == FittingModels.LORENTZIAN_PLUS_LINEAR:
+                model = models.Lorentz1D(amplitude=amplitude_param, x_0=location_param,fwhm=spread_param) + models.Polynomial1D(degree=1)
+            elif fitting_model == FittingModels.VOIGT_PLUS_LINEAR:
+                model = models.Voigt1D(x_0=location_param, amplitude_L=amplitude_param, fwhm_L=spread_param,fwhm_G=spread_param) + models.Polynomial1D(degree=1)
+            else:
+                raise Exception("Unsupported fitting model " + str(fitting_model))
+
+            fitter = fitting.LevMarLSQFitter()
+            model_type = fitting_model
+
+        else:
+            fitter = self.model_fitter.fitter
+            model = self.model_fitter.model
+            model_type = FittingModels.CUSTOM
+
+        return ModelFitter(model, fitter, model_type)
+
+
+    def _fit_model_to_flux(self, trace_names, application_data, model_fitters, selected_data, do_update_client=False, include_fit_substracted_trace=False):
+
+        fitted_info_list = []
+        for model_fitter in model_fitters:
+            for trace_name in trace_names:
+
+                trace = application_data['traces'].get(trace_name)
+
+                x = np.asarray([point['x'] for point in selected_data["points"] if point['curveNumber'] == trace["curveNumber"]])
+                y = np.asarray([point['y'] for point in selected_data["points"] if point['curveNumber'] == trace["curveNumber"]])
+                ind = [point['pointIndex'] for point in selected_data["points"] if point['curveNumber'] == trace["curveNumber"]]
+
+                y_err = np.asarray(trace["flux_error"])[ind] if trace["flux_error"] is not None or len(trace["flux_error"]) > 0 else None
+
+
+                fitter = model_fitter.fitter
+                model = model_fitter.model
+                fitting_model_type = model_fitter.model_type
+
+                fitted_model = fitter(model, x, y, weights=1./ y_err)
+
+                min_x,max_x = np.min(x),np.max(x)
+                x_grid = np.linspace(min_x, max_x, 5*len(x))
+                y_grid = fitted_model(x_grid)
+
+                parameter_errors =  np.sqrt(np.diag(fitter.fit_info['param_cov'])) if fitter.fit_info['param_cov'] is not None else None
+
+                fitted_trace_name = "fit" + str(len(application_data['fitted_models']) + 1) + "_" + trace_name
+                ancestors = trace['ancestors'] + [trace_name]
+                flambda = [f for f in np.asarray(trace['flambda'])[ind]]
+                fitted_trace = Trace(name=fitted_trace_name, wavelength=[x for x in x_grid], flux=[y for y in y_grid],
+                                                ancestors=ancestors,spectrum_type=SpectrumType.FIT, color="black", linewidth=1, alpha=1.0,
+                                                wavelength_unit=trace['wavelength_unit'], flux_unit=trace['flux_unit'],
+                                                flambda=flambda, catalog=trace['catalog']).to_dict()
+
+                self._set_color_for_new_trace(fitted_trace, application_data)
+                self._add_trace_to_data(application_data, fitted_trace_name, fitted_trace, False)
+
+                if include_fit_substracted_trace:
+                    fitted_trace_name = "fit_substr_" + str(len(application_data['fitted_models']) + 1) + "_" + trace_name
+                    ancestors = trace['ancestors'] + [trace_name]
+
+                    y_grid2 = fitted_model(x)
+                    flux = y - y_grid2
+
+                    f_labmda = fl.convert_flux(flux=x, wavelength=y,
+                                           from_flux_unit=trace['flux_unit'], to_flux_unit=FluxUnit.F_lambda,
+                                           to_wavelength_unit=trace.get('flux_unit'))
+
+                    fitted_trace = Trace(name=fitted_trace_name, wavelength=[x for x in x],
+                                         flux=[y for y in flux],
+                                         ancestors=ancestors, spectrum_type=SpectrumType.FIT, color="black",
+                                         linewidth=1, alpha=1.0,
+                                         wavelength_unit=trace['wavelength_unit'], flux_unit=trace['flux_unit'],
+                                         flambda=f_labmda, catalog=trace['catalog']).to_dict()
+
+                    self._set_color_for_new_trace(fitted_trace, application_data)
+                    self._add_trace_to_data(application_data, fitted_trace_name, fitted_trace, do_update_client=False)
+
+
+                fitted_info = {}
+                fitted_info['name'] = fitted_trace_name
+                fitted_info['ancestors'] = ancestors
+                fitted_info['model'] = fitting_model_type
+                fitted_info['parameters'] = {x:y for (x,y) in zip(fitted_model.param_names, fitted_model.parameters)}
+                fitted_info['parameter_errors'] = {x: y for (x, y) in zip(fitted_model.param_names, parameter_errors) } if parameter_errors is not None else None
+                fitted_info['selection_indexes'] = ind
+                fitted_info['wavelength_unit'] = trace['wavelength_unit']
+                fitted_info['flux_unit'] = trace['flux_unit']
+
+                # add to application data:
+                fitted_models = application_data['fitted_models']
+                fitted_models[fitted_trace_name] = fitted_info
+                application_data['fitted_models'] = fitted_models
+
+                application_data['traces'][fitted_trace_name] = fitted_trace
+                application_data['fitted_models'][fitted_trace_name] = fitted_info
+
+                current_fitting_model_types = application_data['fitting_model_types']
+                if fitting_model_type not in current_fitting_model_types:
+                    current_fitting_model_types.append(fitting_model_type)
+                    application_data['fitting_model_types'] = current_fitting_model_types
+
+                #self.write_info("fitting model : " + str(application_data['fitted_models'][fitted_trace_name]) )
+                fitted_info_list.append(fitted_info)
+
+        if do_update_client:
+            self.update_client()
+
+        return fitted_info_list
+
+
+
+    def _fit_model_to_fluxOLD(self, trace_names, application_data, fitting_models, selected_data, custom_model=None,
                            custom_fitter=None, do_update_client=True, include_fit_substracted_trace=False):
         # http://learn.astropy.org/rst-tutorials/User-Defined-Model.html
         # https://docs.astropy.org/en/stable/modeling/new-model.html
@@ -462,6 +534,8 @@ class Viewer():
                 x = np.asarray([point['x'] for point in selected_data["points"] if point['curveNumber'] == trace["curveNumber"] ] )
                 y = np.asarray([point['y'] for point in selected_data["points"] if point['curveNumber'] == trace["curveNumber"]])
                 ind = [point['pointIndex'] for point in selected_data["points"] if point['curveNumber'] == trace["curveNumber"]]
+
+                y_err = np.asarray(trace["flux_error"])[ind] if trace["flux_error"] is not None or len(trace["flux_error"]) > 0 else None
 
                 min_x,max_x = np.min(x),np.max(x)
 
@@ -482,12 +556,12 @@ class Viewer():
 
                     fitting_model_name = fitting_model
                     fitter = fitting.LevMarLSQFitter()
-                    fitted_model = fitter(data_model, x, y)
+                    fitted_model = fitter(data_model, x, y, weights=1./y_err)
 
                 else:
                     fitting_model_name = str(custom_model)
                     fitter = custom_fitter
-                    fitted_model = fitter(custom_model, x, y)
+                    fitted_model = fitter(custom_model, x, y, weights=1./y_err)
 
 
                 x_grid = np.linspace(min_x, max_x, 5*len(x))
@@ -552,27 +626,6 @@ class Viewer():
             self.update_client()
 
 
-########  Trace manipulation/analysis
-
-
-
-    def reset_smoothing(self, trace_name):
-        self._unsmooth_trace([trace_name], self.app_data, do_update_client=True)
-
-
-    def set_smoothing_kernel(self,kernel=SmoothingKernels.GAUSSIAN1D, kernel_width=20, custom_kernel_array=None, custom_kernel_function=None, function_array_size=21):
-        self.smoother.set_smoothing_kernel(kernel, kernel_width, custom_kernel_array, custom_kernel_function, function_array_size)
-
-
-    def smooth_trace(self, trace_name, do_substract=False):
-        self._smooth_trace([trace_name], self.app_data, self.smoother, do_update_client=True, do_substract=do_substract)
-        #self._smooth_trace([trace_name], self.app_data, do_update_client=True, kernel=kernel, kernel_width=kernel_width, custom_kernel_array=custom_kernel_array, custom_kernel_function=custom_kernel_function, function_array_size=function_array_size, do_substract=do_substract)
-
-
-    def fit_model(self, trace_name, fitting_model=FittingModels.GAUSSIAN_PLUS_LINEAR, selected_data=None, custom_model=None):
-        pass
-
-
     def _get_selection(self, selected_data, data_dict):
         selection = {}
         if selected_data != {} and selected_data is not None:
@@ -589,41 +642,90 @@ class Viewer():
 
         return selection
 
+    def _set_selection(self, trace_name, application_data, selection_indices=[], do_update_client=False):
+        curve_number = application_data['traces'][trace_name]['curveNumber']
+        selection = application_data["selection"]
+        new_points = [ point for point in selection["points"] if point['curveNumber'] != curve_number]
+        trace_points = []
+        for ind in selection_indices:
+            point = {}
+            point['curveNumber'] = curve_number
+            point['pointNumber'] = ind
+            point['pointIndex'] = ind
+            point['trace_name'] = trace_name
+            point['x'] = application_data['traces'][trace_name]["wavelength"][ind]
+            point['y'] = application_data['traces'][trace_name]["flux"][ind]
+            trace_points.append(point)
 
-    def get_selection(self):
+        new_points = new_points + trace_points
+        selection['points'] = new_points
+        application_data["selection"] = selection
+
+        if do_update_client:
+            self.update_client()
+
+
+
+
+########  Trace manipulation/analysis for the user
+
+    def set_smoothing_kernel(self,kernel=SmoothingKernels.GAUSSIAN1D, kernel_width=20, custom_array_kernel=None, custom_kernel_function=None, function_array_size=21):
+        self.smoother.set_smoothing_kernel(kernel, kernel_width, custom_array_kernel, custom_kernel_function, function_array_size)
+        if self.smoother.kernel_func_type not in self.app_data["smoothing_kernel_types"]:
+            smoothing_kernel_types = self.app_data.get("smoothing_kernel_types")
+            smoothing_kernel_types.append(self.smoother.kernel_func_type)
+            self.app_data["smoothing_kernel_types"] = smoothing_kernel_types
+            self.update_client()
+
+
+    def smooth_trace(self, trace_name, do_substract=False):
+        self._smooth_trace([trace_name], self.app_data, self.smoother, do_update_client=True, do_substract=do_substract)
+
+    def reset_smoothing(self, trace_name):
+        self._unsmooth_trace([trace_name], self.app_data, do_update_client=True)
+
+    def set_custom_model_fitter(self, model, fitter):
+        self.model_fitter = ModelFitter(model, fitter, FittingModels.CUSTOM)
+        if self.model_fitter.model_type not in self.app_data["fitting_model_types"]:
+            fitting_model_types = self.app_data.get("fitting_model_types")
+            fitting_model_types.append(self.model_fitter.model_type)
+            self.app_data["fitting_model_types"] = fitting_model_types
+            self.update_client()
+
+    def set_model_fitter(self, trace_name, fitting_model=FittingModels.GAUSSIAN_PLUS_LINEAR):
+        self.model_fitter = self._get_model_fitter(trace_name, self.app_data, fitting_model, self.app_data['selection'])
+
+    def fit_model(self, trace_name, include_fit_substracted_trace=False):
+        fitting_info_list = self._fit_model_to_flux([trace_name], self.app_data, [self.model_fitter], self.app_data['selection'], do_update_client=True, include_fit_substracted_trace=include_fit_substracted_trace)
+        return fitting_info_list[0]
+
+    def get_data_selection(self):
         return self.app_data.get("selection")
 
-    def add_spectrum_from_file(self, file_path, name=None, to_wavelength_unit=WavelenghUnit.ANGSTROM, to_flux_unit=FluxUnit.F_lambda ):
-        self._add_spectrum_from_file(file_path, self.app_data, to_wavelength_unit, to_flux_unit, name, do_update_client=True)
+    def set_data_selection(self, trace_name, selection_indices=[]):
+        self._set_selection(trace_name, self.app_data, selection_indices, do_update_client=True)
 
-    def add_trace(self, trace):
-        return self._add_trace_to_data(self.app_data, trace['name'], trace, do_update_client = True)
+    def add_spectrum(self, spectrum):
+        trace = spectrum.to_dict()
+        self._add_trace_to_data(self.app_data, spectrum.name, trace, do_update_client=True)
+
+    def get_spectrum(self, name):
+        t = self.app_data['traces'][name]
+        s = Spectrum(name=name, wavelength=t['wavelength'],flux=t['flux'], flux_error=t['flux_error'], masks=t['masks'],
+                     mask_bits=t['mask_bits'], wavelength_unit=t['wavelength_unit'], flux_unit=t['flux_unit'],
+                     catalog=t['catalog'], spectrum_type=t['spectrum_type'], color=t['color'], linewidth=t['linewidth'],
+                     alpha=t['alpha'])
+        return s
+
+    def get_trace_names(self):
+        return [name for name in self.app_data['traces']]
+
+    def add_spectrum_from_file(self, file_path, name=None, to_wavelength_unit=WavelenghUnit.ANGSTROM, to_flux_unit=FluxUnit.F_lambda):
+        self._add_spectrum_from_file(file_path, self.app_data, to_wavelength_unit, to_flux_unit, name, do_update_client=True)
 
     def update_trace(self, name, trace):
         self.app_data['traces'][name] = trace
         self.update_client()
 
-
-    def add_spectrum(self, spectrum):
-        trace = spectrum.to_dict()
-        return self._add_trace_to_data(self.app_data, spectrum.name, trace, do_update_client=True)
-
-
     def remove_trace(self, name, also_remove_children=False):
         self._remove_traces([name], self.app_data, do_update_client=True, also_remove_children=also_remove_children)
-
-    a = """
-    def build_trace(self, name, x_coords=[], y_coords=[], ancestors=[], type=None, color="black", linewidth=1,
-                    alpha=1.0, x_coords_original=None, y_coords_original=None, wavelength_unit=WavelenghUnit.ANGSTROM,
-                    flux_unit=FluxUnit.F_lambda, flambda=None, masks=None, mask_bits=None, catalog=None):
-
-        args = locals()
-        args.pop('self') # remove self argument
-        spec = Spectrum() # force to match the members of Spectrum class
-        spec.from_dict(args)
-        return spec.to_dict()
-        """
-
-
-    def resample(self):
-        return None

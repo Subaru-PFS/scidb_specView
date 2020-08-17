@@ -6,14 +6,15 @@ import dash_html_components as html
 from textwrap import dedent as d
 from specviewer.spectral_lines import spectral_lines
 import json
-from specviewer.models.enum_models import fitting_models_list, SpectrumType
-from specviewer.smoothing.smoother import default_smoothing_kernels
+from specviewer.models.enum_models import SpectrumType
+from specviewer.smoothing.smoother import default_smoothing_kernels, SmoothingKernels
+from specviewer.fitting.fitter import default_fitting_models, FittingModels
 
 spectral_line_dropdown_options = []
 spectral_line_dropdown_options.append({'label':'all', 'value':'all'})
 spectral_line_dropdown_options = spectral_line_dropdown_options + [ {'label':spectral_lines[line]['fullname'], 'value':spectral_lines[line]['fullname']} for line in spectral_lines]
-fitting_model_options = [{'label':type, 'value':type} for type in fitting_models_list]
 smoothing_kernel_options = [{'label':type, 'value':type} for type in default_smoothing_kernels]
+fitting_model_options = [{'label':type, 'value':type} for type in default_fitting_models]
 
 # docs:
 # https://dash-bootstrap-components.opensource.faculty.ai/
@@ -94,11 +95,12 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                     id='dropdown-for-traces',
                     options=[],  # [{'label': label, 'value': label} for label in labels],
                     # options=[{'label': label, 'value': label} for label in labels],
-                    value='',
+                    value=[],
                     placeholder="Select trace(s)",
                     multi=True,
                     style={},
                     persistence="true",
+                    persisted_props=["value"],
                     persistence_type="memory"
                 ),
                 html.Button("(un)select all", id="select_all_traces_button"),
@@ -133,7 +135,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                             #options=[{'label': "Gaussian", 'value': "Gaussian1DKernel"},
                             #         {'label': "Box", 'value': "Box1DKernel"}],
                             options = smoothing_kernel_options,
-                            value='Gaussian1DKernel',
+                            value=SmoothingKernels.GAUSSIAN1D,
                             placeholder="Select Smoothing kernel",
                             multi=False,
                             style={},
@@ -157,7 +159,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                 dcc.Dropdown(
                     id='fitting-model-dropdown',
                     options= fitting_model_options,
-                    value='',
+                    value=[FittingModels.GAUSSIAN_PLUS_LINEAR],
                     placeholder="Select line profile",
                     multi=True,
                     style={},
@@ -227,7 +229,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                         #https://dash.plotly.com/dash-daq/booleanswitch
                         html.H5("SpectralLines:"),
                         daq.BooleanSwitch(id="spectral-lines-switch",
-                            on=False,
+                            on=True,
                             label="Show lines",
                             labelPosition="top",
                             persistence=True,
@@ -238,7 +240,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                         dcc.Dropdown(
                             id='spectral_lines_dropdown',
                             options=spectral_line_dropdown_options,
-                            value="all",
+                            value=[],
                             placeholder="Choose spectral line(s)",
                             multi=True,
                             style={}, clearable=True
@@ -266,7 +268,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                         html.H5(["Masks:"]),
                         html.Br(),
                         daq.BooleanSwitch(id="and_mask_switch",
-                                          on=False,
+                                          on=True,
                                           label="Show mask(s)",
                                           labelPosition="top",
                                           persistence=True,

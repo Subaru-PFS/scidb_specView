@@ -68,10 +68,20 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
         set_smoothing_kernels_dropdown: function(modified_timestamp, data){
             options = []
             if(data != null){
-                smoothing_kernels = data['smoothing_kernels']
-                for(i=0; i<smoothing_kernels.length; i++){
-                    kernel_name = smoothing_kernels[i]
+                for(i=0; i<data['smoothing_kernel_types'].length; i++){
+                    kernel_name = data['smoothing_kernel_types'][i]
                     options.push({label: kernel_name, value: kernel_name})
+                }
+            }
+            return options
+        },
+
+        set_fitting_models_dropdown: function(modified_timestamp, data){
+            options = []
+            if(data != null){
+                for(i=0; i<data['fitting_model_types'].length; i++){
+                    model_type = data['fitting_model_types'][i]
+                    options.push({label: model_type, value: model_type})
                 }
             }
             return options
@@ -102,6 +112,7 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
                     }
                     tab += "<tr><td>Wavelength unit:</td><td>" + fitted_model['wavelength_unit'] + "</td></tr>"
                     tab += "<tr><td>Flux unit:</td><td>" + fitted_model['flux_unit'] + "</td></tr>"
+                    tab += "<tr><td>   </td><td>  </td></tr>"
 
                 }
                 tab += "</tbody></table>"
@@ -495,66 +506,69 @@ function build_figure_layout(data, spectral_lines_switch=false, redshift=0.0, sp
         }
 
         // plot masks for each trace:
-        for(trace_name in data['traces']){
+        if(data != null){
 
-            selected_bit_list = []
-            selected_masks_in_trace = []
-            for(mask in selected_masks){
-                if(selected_masks[mask].value.trace == trace_name){
-                    selected_masks_in_trace.push(selected_masks[mask].value)
-                }
-            }
+            for(trace_name in data['traces']){
 
-            if(selected_masks_in_trace.length > 0){
-
-
-                mask_color = data['traces'][trace_name].color
-                //mask_color = "rgb(211,211,211)"
-                trace_catalog = data['traces'][trace_name]['catalog']
-                and_mask = data['traces'][trace_name]['masks']['and_mask']
-                wavelength_array = data['traces'][trace_name]['wavelength']
-
-                for(mask_bit in and_mask){
-                    mask_bit2 = parseInt(mask_bit)
-
-                    bits_in_this_region = []
-                    rect_label = ""
-                    for(k=0;k<selected_masks_in_trace.length;k++){
-                        selected_bit = parseInt(selected_masks_in_trace[k].bit)
-                        if( (mask_bit2 & 2**selected_bit) != 0){
-                            bits_in_this_region.push(selected_bit)
-                            //rect_label = rect_label + " " + String(selected_masks_in_trace[k].id)
-                            short_trace_name = String(selected_masks_in_trace[k].trace)
-                            max_name_length = 10
-                            halfname_length = 5
-                            if(short_trace_name.length > max_name_length){
-                                short_trace_name = short_trace_name.substring(0,halfname_length) + "..." + short_trace_name.substring(short_trace_name.length-halfname_length,short_trace_name.length)
-                            }
-                            rect_label = rect_label + short_trace_name + "<br>" + String(selected_masks_in_trace[k].name) + "<br>"
-                        }
-                    }
-                    if(bits_in_this_region.length > 0){
-                        // add masked region
-                        wavelength_indices = and_mask[mask_bit]
-                        for(j=0;j<wavelength_indices.length;j++){
-                            indices = wavelength_indices[j]
-                            x0 = wavelength_array[indices[0]]
-                            x1 = wavelength_array[indices[1]]
-                            y0 = 0.0
-                            y1 = 1.0
-                            if(x0 >= ranges.x_range[0] && x0 <= ranges.x_range[1]){
-                                rectangle =  {type: 'rect', name:rect_label,  layer:'below', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:1.0, color:mask_color, opacity:0.2}, opacity:0.2, fillcolor:mask_color}
-                                shapes.push(rectangle)
-                                annotation = {showarrow: false, text: rect_label, align: "center", x: (x0+x1)/2.0, xref:'x', xanchor: "center", y: y0, yanchor: "bottom", yref:"paper", font:{size:11, family:"Arial",color:"black"}, opacity:0.4}
-                                annotations.push(annotation)
-                            }
-                        }
-
+                selected_bit_list = []
+                selected_masks_in_trace = []
+                for(mask in selected_masks){
+                    if(selected_masks[mask].value.trace == trace_name){
+                        selected_masks_in_trace.push(selected_masks[mask].value)
                     }
                 }
-            }
 
-        }
+                if(selected_masks_in_trace.length > 0){
+
+
+                    mask_color = data['traces'][trace_name].color
+                    //mask_color = "rgb(211,211,211)"
+                    trace_catalog = data['traces'][trace_name]['catalog']
+                    and_mask = data['traces'][trace_name]['masks']['and_mask']
+                    wavelength_array = data['traces'][trace_name]['wavelength']
+
+                    for(mask_bit in and_mask){
+                        mask_bit2 = parseInt(mask_bit)
+
+                        bits_in_this_region = []
+                        rect_label = ""
+                        for(k=0;k<selected_masks_in_trace.length;k++){
+                            selected_bit = parseInt(selected_masks_in_trace[k].bit)
+                            if( (mask_bit2 & 2**selected_bit) != 0){
+                                bits_in_this_region.push(selected_bit)
+                                //rect_label = rect_label + " " + String(selected_masks_in_trace[k].id)
+                                short_trace_name = String(selected_masks_in_trace[k].trace)
+                                max_name_length = 10
+                                halfname_length = 5
+                                if(short_trace_name.length > max_name_length){
+                                    short_trace_name = short_trace_name.substring(0,halfname_length) + "..." + short_trace_name.substring(short_trace_name.length-halfname_length,short_trace_name.length)
+                                }
+                                rect_label = rect_label + short_trace_name + "<br>" + String(selected_masks_in_trace[k].name) + "<br>"
+                            }
+                        }
+                        if(bits_in_this_region.length > 0){
+                            // add masked region
+                            wavelength_indices = and_mask[mask_bit]
+                            for(j=0;j<wavelength_indices.length;j++){
+                                indices = wavelength_indices[j]
+                                x0 = wavelength_array[indices[0]]
+                                x1 = wavelength_array[indices[1]]
+                                y0 = 0.0
+                                y1 = 1.0
+                                if(x0 >= ranges.x_range[0] && x0 <= ranges.x_range[1]){
+                                    rectangle =  {type: 'rect', name:rect_label,  layer:'below', xref:'x', yref: 'paper', y0: y0, y1: y1, x0: x0, x1: x1, line:{ width:1.0, color:mask_color, opacity:0.2}, opacity:0.2, fillcolor:mask_color}
+                                    shapes.push(rectangle)
+                                    annotation = {showarrow: false, text: rect_label, align: "center", x: (x0+x1)/2.0, xref:'x', xanchor: "center", y: y0, yanchor: "bottom", yref:"paper", font:{size:11, family:"Arial",color:"black"}, opacity:0.4}
+                                    annotations.push(annotation)
+                                }
+                            }
+
+                        }
+                    }
+                }
+
+            }
+        } // end if
 
     }
 

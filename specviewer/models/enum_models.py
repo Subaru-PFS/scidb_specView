@@ -33,35 +33,6 @@ class SpectrumType(Base):
         return [v for k,v in SpectrumType.__dict__.items() if k not in methods and not k.startswith('__')]
 
 
-class FittingModels(Base):
-    GAUSSIAN_PLUS_LINEAR = "gaussian + linear"
-    LORENTZIAN_PLUS_LINEAR = "lorentzian + linear"
-    VOIGT_PLUS_LINEAR = "voigt + linear"
-
-    def __init__(self):
-        super().__init__()
-
-    @staticmethod
-    def get_list():
-        methods = {func for func in dir(FittingModels) if callable(getattr(FittingModels, func))}
-        return [v for k,v in FittingModels.__dict__.items() if k not in methods and not k.startswith('__')]
-
-fitting_models_list = FittingModels.get_list()
-
-class SmoothingKernels(Base):
-    GAUSSIAN1D = "Gaussian1DKernel"
-    Box1D = "Box1DKernel"
-
-    def __init__(self):
-        super().__init__()
-
-    @staticmethod
-    def get_list():
-        methods = {func for func in dir(SmoothingKernels) if callable(getattr(SmoothingKernels, func))}
-        return [v for k,v in SmoothingKernels.__dict__.items() if k not in methods and not k.startswith('__')]
-
-smoothing_kernels_list = SmoothingKernels.get_list()
-
 class Catalogs(Base):
     SDSS = "SDSS"
     PFS = "PFS"
