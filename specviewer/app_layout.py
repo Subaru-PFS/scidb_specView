@@ -111,7 +111,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                     options=[
                         {'label': 'also remove derived traces', 'value': 'remove_children'},
                     ],
-                    value=[],  # 'add_model'
+                    value=['remove_children'],  # 'add_model'
                     labelStyle={'display': 'inline-block'},
                     persistence=True,
                     persistence_type="memory",

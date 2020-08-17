@@ -451,6 +451,7 @@ class Viewer():
                 y_grid = fitted_model(x_grid)
 
                 parameter_errors =  np.sqrt(np.diag(fitter.fit_info['param_cov'])) if fitter.fit_info['param_cov'] is not None else None
+                parameters_covariance_matrix = fitter.fit_info['param_cov']
 
                 fitted_trace_name = "fit" + str(len(application_data['fitted_models']) + 1) + "_" + trace_name
                 ancestors = trace['ancestors'] + [trace_name]
@@ -489,7 +490,9 @@ class Viewer():
                 fitted_info['name'] = fitted_trace_name
                 fitted_info['ancestors'] = ancestors
                 fitted_info['model'] = fitting_model_type
+                fitted_info['parameter_names'] = [x for x in fitted_model.param_names],
                 fitted_info['parameters'] = {x:y for (x,y) in zip(fitted_model.param_names, fitted_model.parameters)}
+                fitted_info['covariance'] = parameters_covariance_matrix
                 fitted_info['parameter_errors'] = {x: y for (x, y) in zip(fitted_model.param_names, parameter_errors) } if parameter_errors is not None else None
                 fitted_info['selection_indexes'] = ind
                 fitted_info['wavelength_unit'] = trace['wavelength_unit']
