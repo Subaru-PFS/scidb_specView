@@ -94,7 +94,8 @@ class Viewer():
         #self.spec_figure = self.get_spec_figure_from_data(self.app_data)
 
         #app.layout = self.load_app_layout
-        self.app.layout = app_layout.load_app_layout(self, self.app_port)
+        storage_mode = "session" if as_website else "memory"
+        self.app.layout = app_layout.load_app_layout(self, self.app_port, storage_mode)
         callbacks.load_callbacks(self)
 
     def show_jupyter_app(self, debug=False):
@@ -109,6 +110,9 @@ class Viewer():
             self.app.run_server(mode='jupyterlab', port=self.app_port, debug=debug, dev_tools_ui=True,dev_tools_props_check=True,dev_tools_hot_reload=True,dev_tools_silence_routes_logging=True)  # dash + jupyterdash
             #jupyter_viewer.show(socketio_app)  # dash + jupyterlab_dash + socketIO
             #self.socketio_app.run(app.server) # dash + jupyterdash + socketIO
+
+            # to refresh Jupyter with what self.app_data has
+            #self.update_client()
 
     @staticmethod
     def build_app_data():
@@ -439,7 +443,7 @@ class Viewer():
         return ModelFitter(model, fitter, model_type)
 
 
-    def _fit_model_to_flux(self, trace_names, application_data, model_fitters, selected_data, do_update_client=False, include_fit_substracted_trace=False):
+    def _fit_model_to_flux(self, trace_names, application_data, model_fitters, selected_data, do_update_client=False, add_fit_substracted_trace=False):
 
         curve_mapping = {name: ind for ind, name in enumerate(application_data['traces'])}
 
@@ -481,18 +485,19 @@ class Viewer():
                 self._set_color_for_new_trace(fitted_trace, application_data)
                 self._add_trace_to_data(application_data, fitted_trace_name, fitted_trace, False)
 
-                if include_fit_substracted_trace:
-                    fitted_trace_name = "fit_substr_" + str(len(application_data['fitted_models']) + 1) + "_" + trace_name
+                if add_fit_substracted_trace:
+                    fitted_trace_name = "fitsub_" + str(len(application_data['fitted_models']) + 1) + "_" + trace_name
                     ancestors = trace['ancestors'] + [trace_name]
 
-                    y_grid2 = fitted_model(x)
-                    flux = y - y_grid2
+                    flux = np.array(trace.get('flux'))
+                    diff = y - fitted_model(x)
+                    flux[ind] = diff
 
                     f_labmda = fl.convert_flux(flux=x, wavelength=y,
                                            from_flux_unit=trace['flux_unit'], to_flux_unit=FluxUnit.F_lambda,
                                            to_wavelength_unit=WavelenghUnit.ANGSTROM)
 
-                    fitted_trace = Trace(name=fitted_trace_name, wavelength=[x for x in x],
+                    fitted_trace = Trace(name=fitted_trace_name, wavelength=trace.get("wavelength"),
                                          flux=[y for y in flux],
                                          ancestors=ancestors, spectrum_type=SpectrumType.FIT, color="black",
                                          linewidth=1, alpha=1.0,

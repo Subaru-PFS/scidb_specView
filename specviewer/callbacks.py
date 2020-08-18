@@ -246,6 +246,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                  State('kernel_width_box', 'value'),
                  State('add_smoothing_as_trace_checklist', 'value'),
                  State('fitting-model-dropdown', 'value'),
+                 State('add_fit_substracted_trace_checklist', 'value'),
                  State('spec-graph', 'selectedData'),
                  State('remove_children_checklist', 'value'),
                  State("specid","value"),
@@ -254,7 +255,7 @@ def load_callbacks(self): # self is passed as the Viewer class
             def process_input(n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button,n_clicks_smooth_substract_button,
                               n_clicks_unsmooth_button, wavelength_unit, flux_unit, n_clicks_model_fit_button, show_model_button,show_sky_button,url_search_string,n_clicks_specid_button,
                               list_of_names, list_of_dates, data, data_timestamp, dropdown_trace_names,
-                              smoothing_kernel_name, smoothing_kernel_width, add_smoothing_as_trace_checklist, fitting_models, selected_data, remove_children_checklist,specid):
+                              smoothing_kernel_name, smoothing_kernel_width, add_smoothing_as_trace_checklist, fitting_models, add_fit_substracted_trace_checklist, selected_data, remove_children_checklist,specid):
                 try:
 
                     # self.debug_data['process_uploaded_file'] = "process_uploaded_file"
@@ -305,8 +306,9 @@ def load_callbacks(self): # self is passed as the Viewer class
                            or len(dropdown_trace_names) == 0 or flux_unit == FluxUnit.AB_magnitude:
                             return no_update
                         #self._fit_model_to_flux(dropdown_trace_names, data_dict, fitting_models, selected_data, do_update_client=False)
+                        add_fit_substracted_trace = True if len(add_fit_substracted_trace_checklist)>0 else False
                         model_fitters = [ self._get_model_fitter(trace_name, data_dict, fitting_model, selected_data) for trace_name in dropdown_trace_names for fitting_model in fitting_models]
-                        _ = self._fit_model_to_flux(dropdown_trace_names, data_dict, model_fitters, selected_data, do_update_client=False)
+                        _ = self._fit_model_to_flux(dropdown_trace_names, data_dict, model_fitters, selected_data, do_update_client=False, add_fit_substracted_trace=add_fit_substracted_trace)
                         return data_dict
                     elif task_name == "show_model_button":
                         if len(dropdown_trace_names)>0:
@@ -386,6 +388,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                  State('kernel_width_box', 'value'),
                  State('add_smoothing_as_trace_checklist', 'value'),
                  State('fitting-model-dropdown', 'value'),
+                 State('add_fit_substracted_trace_checklist', 'value'),
                  State('remove_children_checklist', 'value'),
                  State("specid", "value"),
                  ])
@@ -394,7 +397,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                               n_clicks_unsmooth_button, wavelength_unit, flux_unit, n_clicks_model_fit_button, show_model_button,show_sky_button, selected_data,
                               n_clicks_specid_button, pull_trigger_value,
                               list_of_names,list_of_dates, data, data_timestamp, dropdown_trace_names,
-                              smoothing_kernel_name,smoothing_kernel_width, add_smoothing_as_trace_checklist, fitting_models, remove_children_checklist, specid):
+                              smoothing_kernel_name,smoothing_kernel_width, add_smoothing_as_trace_checklist, fitting_models, add_fit_substracted_trace_checklist, remove_children_checklist, specid):
                 try:
                     task_name = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
                     data_dict = data if data is not None else self.build_app_data()
@@ -501,9 +504,9 @@ def load_callbacks(self): # self is passed as the Viewer class
                             return no_update
 
                         #self._fit_model_to_flux(dropdown_trace_names, self.app_data, fitting_models, selected_data, do_update_client=False)
-
+                        add_fit_substracted_trace = True if len(add_fit_substracted_trace_checklist) > 0 else False
                         model_fitters = [self._get_model_fitter(trace_name, self.app_data, fitting_model, selected_data) for trace_name in dropdown_trace_names for fitting_model in fitting_models]
-                        _ = self._fit_model_to_flux(dropdown_trace_names, self.app_data, model_fitters, selected_data, do_update_client=False)
+                        _ = self._fit_model_to_flux(dropdown_trace_names, self.app_data, model_fitters, selected_data, do_update_client=False,add_fit_substracted_trace=add_fit_substracted_trace)
 
                         self._synch_data(self.app_data, data_dict, do_update_client=False)
                         self.write_info("End fitting model . Traces in datadict: " + str(

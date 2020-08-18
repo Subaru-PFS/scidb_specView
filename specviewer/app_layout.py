@@ -31,7 +31,7 @@ styles = {
 }
 
 
-def load_app_layout(self, app_port): # self is passed as the Viewer class to fill out the figure element on the
+def load_app_layout(self, app_port, storage_mode): # self is passed as the Viewer class to fill out the figure element on the
     layout = html.Div([
         # The local store will take the initial data only the first time the page is loaded
         # and keep it until it is cleared.
@@ -40,7 +40,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
         dcc.Loading(
             id="loading-1",
             type="default",
-            children=dcc.Store(id='store', storage_type='memory'),
+            children=dcc.Store(id='store', storage_type=storage_mode),
             style={'size': 5},
         ),
         # stores the URL of the page plus query string
@@ -70,7 +70,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                 html.Br(),
                 dcc.Input(id="specid", type="text", placeholder="Enter spectrum ID(s)",
                           debounce=True, autoFocus=True,
-                          persistence="true", persistence_type="memory", value=""),
+                          persistence="true", persistence_type=storage_mode, value=""),
                 html.Button("load", id="search_spectrum_button"),
                 html.Br(),
                 dcc.Upload(id='upload-data',className="upload", children=html.Div([
@@ -101,7 +101,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                     style={},
                     persistence="true",
                     persisted_props=["value"],
-                    persistence_type="memory"
+                    persistence_type=storage_mode
                 ),
                 html.Button("(un)select all", id="select_all_traces_button"),
                 html.Button("Remove selected", id="remove_trace_button"),
@@ -114,7 +114,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                     value=['remove_children'],  # 'add_model'
                     labelStyle={'display': 'inline-block'},
                     persistence=True,
-                    persistence_type="memory",
+                    persistence_type=storage_mode,
                     persisted_props=["value"],
                 ),
 
@@ -135,13 +135,13 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                             #options=[{'label': "Gaussian", 'value': "Gaussian1DKernel"},
                             #         {'label': "Box", 'value': "Box1DKernel"}],
                             options = smoothing_kernel_options,
-                            value=SmoothingKernels.GAUSSIAN1D,
+                            value=SmoothingKernels.MEDIAN,
                             placeholder="Select Smoothing kernel",
                             multi=False,
                             style={},
                             clearable = False,
                             #persistence=True,
-                            persistence_type="memory"
+                            persistence_type=storage_mode
                         )
                     ]),
                     html.Div(className="col-md-6", children=[
@@ -162,7 +162,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                     value=[],  # ['add_smoothed_as_trace']
                     labelStyle={'display': 'inline-block'},
                     persistence=True,
-                    persistence_type="memory",
+                    persistence_type=storage_mode,
                     persisted_props=["value"],
                 ),
                 html.Br(),
@@ -176,10 +176,22 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                     multi=True,
                     style={},
                     persistence=True,
-                    persistence_type="memory"
+                    persistence_type=storage_mode
                 ),
                 html.Br(),
                 html.Button('Fit model(s)', id='model_fit_button'),
+                html.Br(),
+                dcc.Checklist(
+                    id="add_fit_substracted_trace_checklist",
+                    options=[
+                        {'label': 'add fit-substracted trace', 'value': 'add_fit_substracted_trace'},
+                    ],
+                    value=[],  # ['add_smoothed_as_trace']
+                    labelStyle={'display': 'inline-block'},
+                    persistence=True,
+                    persistence_type=storage_mode,
+                    persisted_props=["value"],
+                ),
                 html.Br(),
                 html.Br(),
                 dcc.Markdown(id = "fitted_models_table", children='', dangerously_allow_html=True),
@@ -201,7 +213,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                     id='spec-graph',
                     #figure=self.spec_figure,
                     figure={},
-                    config={'displayModeBar': True, 'scrollZoom': True, 'responsive': False, 'displaylogo': False },
+                    config={'displayModeBar': True, 'scrollZoom': True, 'responsive': False, 'displaylogo': False},
                     #animate=True # gives lots of problems
                 ),
                 html.Div(className="row",children=[
@@ -217,7 +229,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                             multi=False,
                             style={}, clearable=False,
                             persistence=True,
-                            persistence_type="memory",
+                            persistence_type=storage_mode,
                         ),
                         html.Br(),
                         html.Br(),
@@ -234,7 +246,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                             multi=False,
                             style={}, clearable=False,
                             persistence=True,
-                            persistence_type="memory",
+                            persistence_type=storage_mode,
                         ),
                     ]),
                     html.Div(className="col-sm-2", children=[
@@ -245,7 +257,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                             label="Show lines",
                             labelPosition="top",
                             persistence=True,
-                            persistence_type="memory",
+                            persistence_type=storage_mode,
                         ),
                         html.Br(),
                         html.Br(),
@@ -284,7 +296,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                                           label="Show mask(s)",
                                           labelPosition="top",
                                           persistence=True,
-                                          persistence_type="memory",
+                                          persistence_type=storage_mode,
                                           ),
                         html.Br(),
                         dcc.Dropdown(
@@ -295,7 +307,7 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                             multi=True,
                             style={},
                             persistence=True,
-                            persistence_type="memory"
+                            persistence_type=storage_mode
                         ),
                     ]),
                     html.Div(className="col-sm-4", children=[])
