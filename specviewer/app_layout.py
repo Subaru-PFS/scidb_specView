@@ -154,6 +154,18 @@ def load_app_layout(self, app_port): # self is passed as the Viewer class to fil
                 html.Button('Substract smoothed', id='trace_smooth_substract_button'),
                 html.Button('Reset', id='trace_unsmooth_button'),
                 html.Br(),
+                dcc.Checklist(
+                    id="add_smoothing_as_trace_checklist",
+                    options=[
+                        {'label': 'add result as new trace', 'value': 'add_as_new_trace'},
+                    ],
+                    value=[],  # ['add_smoothed_as_trace']
+                    labelStyle={'display': 'inline-block'},
+                    persistence=True,
+                    persistence_type="memory",
+                    persisted_props=["value"],
+                ),
+                html.Br(),
                 html.Br(),
                 html.H5(["Model Fitting:"]),
                 dcc.Dropdown(

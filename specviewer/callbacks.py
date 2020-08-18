@@ -244,6 +244,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                  State('dropdown-for-traces', 'value'),
                  State('smoothing_kernels_dropdown', 'value'),
                  State('kernel_width_box', 'value'),
+                 State('add_smoothing_as_trace_checklist', 'value'),
                  State('fitting-model-dropdown', 'value'),
                  State('spec-graph', 'selectedData'),
                  State('remove_children_checklist', 'value'),
@@ -253,7 +254,7 @@ def load_callbacks(self): # self is passed as the Viewer class
             def process_input(n_clicks_remove_trace_button, list_of_contents, n_clicks_smooth_button,n_clicks_smooth_substract_button,
                               n_clicks_unsmooth_button, wavelength_unit, flux_unit, n_clicks_model_fit_button, show_model_button,show_sky_button,url_search_string,n_clicks_specid_button,
                               list_of_names, list_of_dates, data, data_timestamp, dropdown_trace_names,
-                              smoothing_kernel_name, smoothing_kernel_width, fitting_models, selected_data, remove_children_checklist,specid):
+                              smoothing_kernel_name, smoothing_kernel_width, add_smoothing_as_trace_checklist, fitting_models, selected_data, remove_children_checklist,specid):
                 try:
 
                     # self.debug_data['process_uploaded_file'] = "process_uploaded_file"
@@ -289,9 +290,9 @@ def load_callbacks(self): # self is passed as the Viewer class
 
                     elif (task_name == "trace_smooth_button" or task_name == 'trace_smooth_substract_button') and len(dropdown_trace_names)>0 and len(smoothing_kernel_name) > 0:
                         do_substract = True if task_name == 'trace_smooth_substract_button' else False
-
+                        do_add = True if len(add_smoothing_as_trace_checklist)>0 else False
                         smoother = self._get_smoother(smoothing_kernel_name, smoothing_kernel_width)
-                        self._smooth_trace(dropdown_trace_names, data_dict, smoother, do_update_client=False, do_substract=do_substract)
+                        self._smooth_trace(dropdown_trace_names, data_dict, smoother, do_update_client=False, do_substract=do_substract, as_new_trace=do_add)
                         #self._smooth_trace(dropdown_trace_names, data_dict, do_update_client=False, kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width), do_substract=do_substract)
                         return data_dict
 
@@ -383,6 +384,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                  State('dropdown-for-traces', 'value'),
                  State('smoothing_kernels_dropdown', 'value'),
                  State('kernel_width_box', 'value'),
+                 State('add_smoothing_as_trace_checklist', 'value'),
                  State('fitting-model-dropdown', 'value'),
                  State('remove_children_checklist', 'value'),
                  State("specid", "value"),
@@ -392,7 +394,7 @@ def load_callbacks(self): # self is passed as the Viewer class
                               n_clicks_unsmooth_button, wavelength_unit, flux_unit, n_clicks_model_fit_button, show_model_button,show_sky_button, selected_data,
                               n_clicks_specid_button, pull_trigger_value,
                               list_of_names,list_of_dates, data, data_timestamp, dropdown_trace_names,
-                              smoothing_kernel_name,smoothing_kernel_width, fitting_models, remove_children_checklist, specid):
+                              smoothing_kernel_name,smoothing_kernel_width, add_smoothing_as_trace_checklist, fitting_models, remove_children_checklist, specid):
                 try:
                     task_name = dash.callback_context.triggered[0]['prop_id'].split('.')[0]
                     data_dict = data if data is not None else self.build_app_data()
@@ -478,9 +480,9 @@ def load_callbacks(self): # self is passed as the Viewer class
                         #                   kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),
                         #                   do_substract=do_substract)
 
-
+                        do_add = True if len(add_smoothing_as_trace_checklist) > 0 else False
                         smoother = self._get_smoother(smoothing_kernel_name, smoothing_kernel_width)
-                        self._smooth_trace(dropdown_trace_names, self.app_data, smoother, do_update_client=False, do_substract=do_substract)
+                        self._smooth_trace(dropdown_trace_names, self.app_data, smoother, do_update_client=False, do_substract=do_substract, as_new_trace=do_add)
                         #self._smooth_trace(dropdown_trace_names, self.app_data, do_update_client=False,kernel=smoothing_kernel_name, kernel_width=int(smoothing_kernel_width),do_substract=do_substract)
                         self._synch_data(self.app_data, data_dict, do_update_client=False)
                         return data_dict

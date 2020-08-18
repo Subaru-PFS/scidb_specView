@@ -57,18 +57,18 @@ class Trace(Spectrum):
         self.is_visible = is_visible
         self.show_error = show_error
         self.ancestors = ancestors
-        self.curveNumber = None
 
-        def from_spectrum(spectrum, visible = True, ancestors = ancestors):
-            for key,value in spectrum.to_dict().items():
-                self.__dict__[key] = value
 
-            self.flambda = fl.convert_flux(spectrum.flux, spectrum.wavelength, spectrum.flux_unit, FluxUnit.F_lambda, WavelenghUnit.ANGSTROM)
-            self.visible = visible
-            self.ancestors = ancestors
+    def from_spectrum(self, spectrum, ancestors=[], visible = True):
+        for key,value in spectrum.to_dict().items():
+            self.__dict__[key] = value
 
-        def to_spectrum(self):
-            return Spectrum().from_dict(self.__dict__)
+        self.flambda = fl.convert_flux(spectrum.flux, spectrum.wavelength, spectrum.flux_unit, FluxUnit.F_lambda, WavelenghUnit.ANGSTROM)
+        self.visible = visible
+        self.ancestors = ancestors
+
+    def to_spectrum(self):
+        return Spectrum().from_dict(self.__dict__)
 
 
 

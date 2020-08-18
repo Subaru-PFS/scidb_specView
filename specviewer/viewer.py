@@ -64,6 +64,8 @@ class Viewer():
         self.socketio = SocketIO(self.server)
         #self.app = JupyterSocketDash(__name__, external_stylesheets=external_stylesheets,external_scripts=external_scripts, server=self.server)
         self.app.server.secret_key = 'SOME_KEY_STRING'
+        self.app.title="Spectrum Viewer"
+
 
         self.app_data = process_manager.dict()
         self.app_data_timestamp = process_manager.dict()
@@ -196,7 +198,6 @@ class Viewer():
             raise Exception("Trace named '" + name + "' already exists.")
 
         num_stored_traces = len(application_data['traces'])
-        trace['curveNumber'] = num_stored_traces # in base 0
         traces[name] = trace
         application_data['traces'] = traces
 
@@ -325,7 +326,7 @@ class Viewer():
             smoother = self.smoother
         return smoother
 
-    def _smooth_trace(self, trace_names, application_data, smoother, do_update_client=True, do_substract=False):
+    def _smooth_trace(self, trace_names, application_data, smoother, do_update_client=True, do_substract=False, as_new_trace=False, new_trace_name=None):
         for trace_name in trace_names:
             if trace_name in application_data['traces']:
                 traces = application_data['traces']
@@ -337,10 +338,35 @@ class Viewer():
 
                 if do_substract:
                     smoothed_flux = flux - smoothed_flux
-                trace['flux'] = smoothed_flux
 
-                #remove old trace and replace it with new trace containing smoothed data
-                traces[trace_name] = trace
+                if not as_new_trace:
+                    trace['flux'] = smoothed_flux
+                    traces[trace_name] = trace
+                else:
+
+                    if new_trace_name is None:
+                        names = [ name for name in application_data['traces']  if trace_name in application_data['traces'][name]["ancestors"] and SpectrumType.SMOOTHED in application_data['traces'][name]["spectrum_type"] ]
+                        smoothed_trace_name = "smoothed_" + str(len(names) + 1) + "_" + trace_name
+                    else:
+                        smoothed_trace_name = new_trace_name
+
+                    ancestors = trace['ancestors'] + [trace_name]
+
+                    f_labmda = fl.convert_flux(flux=[y for y in smoothed_flux], wavelength=[x for x in trace["wavelength"]],
+                                           from_flux_unit=trace['flux_unit'], to_flux_unit=FluxUnit.F_lambda,
+                                           to_wavelength_unit=WavelenghUnit.ANGSTROM)
+
+                    smoothed_trace = Trace(name=smoothed_trace_name, wavelength=[x for x in trace["wavelength"]],
+                                            flux=[y for y in smoothed_flux], flux_error=trace.get('flux_error'),
+                                            ancestors=ancestors, spectrum_type=SpectrumType.SMOOTHED, color="black",
+                                            linewidth=1, alpha=1.0, wavelength_unit=trace['wavelength_unit'],
+                                            flux_unit=trace['flux_unit'], flambda=f_labmda,
+                                            flambda_error=trace.get("flambda_error"),catalog=trace['catalog']).to_dict()
+
+                    self._set_color_for_new_trace(smoothed_trace, application_data)
+                    traces[smoothed_trace_name] = smoothed_trace
+
+
                 application_data['traces'] = traces
 
                 # if kernel is custom, add it to the data dict:
@@ -394,27 +420,15 @@ class Viewer():
 
         #trace = application_data['traces'].get(trace_name)
 
-        x = np.asarray([point['x'] for point in selected_data["points"] if point['curveNumber'] == application_data['traces'][trace_name]["curveNumber"]])
-        y = np.asarray([point['y'] for point in selected_data["points"] if point['curveNumber'] == application_data['traces'][trace_name]["curveNumber"]])
+        curve_mapping = {name: ind for ind, name in enumerate(application_data['traces'])}
+        curve_number = curve_mapping[trace_name]
 
-        min_x, max_x = np.min(x), np.max(x)
+        x = np.asarray([point['x'] for point in selected_data["points"] if point['curveNumber'] == curve_number ])
+        y = np.asarray([point['y'] for point in selected_data["points"] if point['curveNumber'] == curve_number ])
 
         if fitting_model in default_fitting_models:
 
-            location_param = np.mean(x)
-            amplitude_param = np.max(np.abs(y))
-            spread_param = (max_x - min_x) / len(x)
-
-            if fitting_model == FittingModels.GAUSSIAN_PLUS_LINEAR:
-                model = models.Gaussian1D(amplitude=amplitude_param, mean=location_param,stddev=spread_param) + models.Polynomial1D(degree=1)
-            elif fitting_model == FittingModels.LORENTZIAN_PLUS_LINEAR:
-                model = models.Lorentz1D(amplitude=amplitude_param, x_0=location_param,fwhm=spread_param) + models.Polynomial1D(degree=1)
-            elif fitting_model == FittingModels.VOIGT_PLUS_LINEAR:
-                model = models.Voigt1D(x_0=location_param, amplitude_L=amplitude_param, fwhm_L=spread_param,fwhm_G=spread_param) + models.Polynomial1D(degree=1)
-            else:
-                raise Exception("Unsupported fitting model " + str(fitting_model))
-
-            fitter = fitting.LevMarLSQFitter()
+            model,fitter = ModelFitter.get_model_with_fitter(fitting_model, x, y)
             model_type = fitting_model
 
         else:
@@ -427,15 +441,18 @@ class Viewer():
 
     def _fit_model_to_flux(self, trace_names, application_data, model_fitters, selected_data, do_update_client=False, include_fit_substracted_trace=False):
 
+        curve_mapping = {name: ind for ind, name in enumerate(application_data['traces'])}
+
         fitted_info_list = []
         for model_fitter in model_fitters:
             for trace_name in trace_names:
 
                 trace = application_data['traces'].get(trace_name)
+                curve_number = curve_mapping[trace_name]
 
-                x = np.asarray([point['x'] for point in selected_data["points"] if point['curveNumber'] == trace["curveNumber"]])
-                y = np.asarray([point['y'] for point in selected_data["points"] if point['curveNumber'] == trace["curveNumber"]])
-                ind = [point['pointIndex'] for point in selected_data["points"] if point['curveNumber'] == trace["curveNumber"]]
+                x = np.asarray([point['x'] for point in selected_data["points"] if point['curveNumber'] == curve_number])
+                y = np.asarray([point['y'] for point in selected_data["points"] if point['curveNumber'] == curve_number])
+                ind = [point['pointIndex'] for point in selected_data["points"] if point['curveNumber'] == curve_number]
 
                 y_err = np.asarray(trace["flux_error"])[ind] if trace["flux_error"] is not None or len(trace["flux_error"]) > 0 else None
 
@@ -450,16 +467,16 @@ class Viewer():
                 x_grid = np.linspace(min_x, max_x, 5*len(x))
                 y_grid = fitted_model(x_grid)
 
-                parameter_errors =  np.sqrt(np.diag(fitter.fit_info['param_cov'])) if fitter.fit_info['param_cov'] is not None else None
-                parameters_covariance_matrix = fitter.fit_info['param_cov']
+                parameter_errors =  np.sqrt(np.diag(fitter.fit_info.get('param_cov'))) if fitter.fit_info.get('param_cov') is not None else None
+                parameters_covariance_matrix = fitter.fit_info.get('param_cov')
 
                 fitted_trace_name = "fit" + str(len(application_data['fitted_models']) + 1) + "_" + trace_name
                 ancestors = trace['ancestors'] + [trace_name]
                 flambda = [f for f in np.asarray(trace['flambda'])[ind]]
                 fitted_trace = Trace(name=fitted_trace_name, wavelength=[x for x in x_grid], flux=[y for y in y_grid],
-                                                ancestors=ancestors,spectrum_type=SpectrumType.FIT, color="black", linewidth=1, alpha=1.0,
-                                                wavelength_unit=trace['wavelength_unit'], flux_unit=trace['flux_unit'],
-                                                flambda=flambda, catalog=trace['catalog']).to_dict()
+                                        ancestors=ancestors, spectrum_type=SpectrumType.FIT, color="black", linewidth=1,
+                                        alpha=1.0, wavelength_unit=trace['wavelength_unit'],flux_unit=trace['flux_unit'],
+                                        flambda=flambda, catalog=trace['catalog']).to_dict()
 
                 self._set_color_for_new_trace(fitted_trace, application_data)
                 self._add_trace_to_data(application_data, fitted_trace_name, fitted_trace, False)
@@ -473,7 +490,7 @@ class Viewer():
 
                     f_labmda = fl.convert_flux(flux=x, wavelength=y,
                                            from_flux_unit=trace['flux_unit'], to_flux_unit=FluxUnit.F_lambda,
-                                           to_wavelength_unit=trace.get('flux_unit'))
+                                           to_wavelength_unit=WavelenghUnit.ANGSTROM)
 
                     fitted_trace = Trace(name=fitted_trace_name, wavelength=[x for x in x],
                                          flux=[y for y in flux],
@@ -528,15 +545,18 @@ class Viewer():
         # https://docs.astropy.org/en/stable/modeling/index.html
         # https://docs.astropy.org/en/stable/modeling/reference_api.html
 
+        curve_mapping = {name:ind for ind, name in enumerate(application_data['traces'])}
+
         for fitting_model in fitting_models:
             for trace_name in trace_names:
                 #ind = trace_indexes[trace_name]
 
                 trace = application_data['traces'].get(trace_name)
+                curve_number = curve_mapping[trace_name]
 
-                x = np.asarray([point['x'] for point in selected_data["points"] if point['curveNumber'] == trace["curveNumber"] ] )
-                y = np.asarray([point['y'] for point in selected_data["points"] if point['curveNumber'] == trace["curveNumber"]])
-                ind = [point['pointIndex'] for point in selected_data["points"] if point['curveNumber'] == trace["curveNumber"]]
+                x = np.asarray([point['x'] for point in selected_data["points"] if point['curveNumber'] == curve_number ] )
+                y = np.asarray([point['y'] for point in selected_data["points"] if point['curveNumber'] == curve_number])
+                ind = [point['pointIndex'] for point in selected_data["points"] if point['curveNumber'] == curve_number]
 
                 y_err = np.asarray(trace["flux_error"])[ind] if trace["flux_error"] is not None or len(trace["flux_error"]) > 0 else None
 
@@ -634,7 +654,8 @@ class Viewer():
         if selected_data != {} and selected_data is not None:
             selection = {key: value for key, value in selected_data.items()}
             # adding trace name to each points:
-            curve_mapping = { data_dict['traces'][trace]['curveNumber']:data_dict['traces'][trace]['name'] for trace in data_dict['traces']}
+
+            curve_mapping = {ind:name  for ind,name in enumerate(data_dict['traces'])}
 
             points = []
             for point in selection['points']:
@@ -646,9 +667,12 @@ class Viewer():
         return selection
 
     def _set_selection(self, trace_name, application_data, selection_indices=[], do_update_client=False):
-        curve_number = application_data['traces'][trace_name]['curveNumber']
+        curve_mapping = {name: ind for ind, name in enumerate(application_data['traces'])}
+        curve_number = curve_mapping[trace_name]
+
         selection = application_data["selection"]
         new_points = [ point for point in selection["points"] if point['curveNumber'] != curve_number]
+
         trace_points = []
         for ind in selection_indices:
             point = {}

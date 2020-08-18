@@ -2,11 +2,12 @@ from .base_model import Base
 
 
 class ObjectType(Base):
-    GALAXY='GALAXY'
-    STAR='STAR'
-    QSO='QSO'
-    DEFAULT="DEFAULT"
-    UNKNOWN="UNKNOWN"
+    GALAXY = 'GALAXY'
+    STAR = 'STAR'
+    QSO = 'QSO'
+    DEFAULT = "DEFAULT"
+    UNKNOWN = "UNKNOWN"
+
     def __init__(self):
         super().__init__()
 
@@ -15,14 +16,16 @@ class ObjectType(Base):
         methods = {func for func in dir(ObjectType) if callable(getattr(ObjectType, func))}
         return [v for k,v in ObjectType.__dict__.items() if k not in methods and not k.startswith('__')]
 
+
 class SpectrumType(Base):
-    OBJECT="OBJECT"
-    OBJECT_PRECURSOR="OBJECT_PRECURSOR"
-    SKY="SKY"
-    MODEL="MODEL"
-    ERROR="ERROR"
+    OBJECT = "OBJECT"
+    OBJECT_PRECURSOR = "OBJECT_PRECURSOR"
+    SKY = "SKY"
+    MODEL = "MODEL"
+    ERROR = "ERROR"
     FIT = "FIT"
-    DEFAULT="DEFAULT"
+    DEFAULT = "DEFAULT"
+    SMOOTHED = "SMOOTHED"
 
     def __init__(self):
         super().__init__()
