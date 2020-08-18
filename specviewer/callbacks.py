@@ -325,6 +325,9 @@ def load_callbacks(self): # self is passed as the Viewer class
                     elif task_name == "url":
                         specid= "dedW"
                         if url_search_string is not None and url_search_string != "":
+                            #delete all previous data
+                            trace_names = [x for x in data_dict['traces']]
+                            self._remove_traces(trace_names, data_dict, do_update_client=False,also_remove_children=True)
                             self._load_from_specid(specid, wavelength_unit, flux_unit, data_dict)
 
                         return data_dict

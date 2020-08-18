@@ -98,6 +98,13 @@ class Viewer():
         self.app.layout = app_layout.load_app_layout(self, self.app_port, storage_mode)
         callbacks.load_callbacks(self)
 
+        @self.server.route('/api/health')
+        def health():
+            return {'is_healthy':True}
+
+
+
+
     def show_jupyter_app(self, debug=False):
         if not self.as_website:
             # self.load_callbacks()
