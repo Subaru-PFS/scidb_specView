@@ -60,7 +60,7 @@ class Viewer():
 
         self.server = flask.Flask(__name__)  # define flask app.server
         #self.app = JupyterDash(__name__, external_stylesheets=external_stylesheets, external_scripts=external_scripts,server=self.server)
-        self.app = JupyterDash(__name__, external_stylesheets=external_stylesheets,external_scripts=external_scripts, server=self.server, include_assets_files=)
+        self.app = JupyterDash(__name__, external_stylesheets=external_stylesheets,external_scripts=external_scripts, server=self.server)
         if not as_website:
             self.socketio = SocketIO(self.server)
         #self.app = JupyterSocketDash(__name__, external_stylesheets=external_stylesheets,external_scripts=external_scripts, server=self.server)
