@@ -37,7 +37,7 @@ json5==0.9.4
 jsonschema==3.2.0
 jupyter-client==6.1.3
 jupyter-core==4.6.3
-jupyter-server-proxy==1.3.2
+jupyter-server-proxy==3.2.1
 jupyterlab==2.1.2
 jupyterlab-dash==0.1.0a3
 jupyterlab-server==1.1.1
